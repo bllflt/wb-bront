@@ -9,8 +9,8 @@ interface CharacterData {
     appearance: string;
     sex: Number;
     images: string[];
-    description: string;
-    rolesplaying: string[];
+    roleplaying: string[];
+    background: string;
 }
 
 
@@ -43,15 +43,44 @@ const CharacterList = () => {
 
     return (
         <div>
-            <select
-                value={currentCharacter && currentCharacter.name || "none"}
-                onChange={e => handleChange(e.target.value)}
-            >
-                <option value="none" disabled hidden> Select a Character</option>
-                {characters.map((e, key) => {
-                    return <option value={e.name} key={key}> {e.name}</option>
-                })}
-            </select>
+            <div>
+                <select
+                    value={currentCharacter && currentCharacter.name || "none"}
+                    onChange={e => handleChange(e.target.value)}
+                >
+                    <option value="none" disabled hidden> Select a Character</option>
+                    {characters.map((e, key) => {
+                        return <option value={e.name} key={key}> {e.name}</option>
+                    })}
+                </select>
+            </div>
+            <div>
+                {currentCharacter ? (
+                    <div>
+                        <div style={{ float: 'left' }}>
+                            {currentCharacter.images && currentCharacter.images.map((img, idx) => (
+                                <img key={idx} src={"http://127.0.0.1:5000/images/".concat(img)} alt={`${currentCharacter.name} image ${idx + 1}`} style={{ maxWidth: '200px', marginRight: '10px' }} />
+                            ))}
+                        </div>
+                        <h2>{currentCharacter.name}</h2>
+                        <p>Appearance: {currentCharacter.appearance}</p>
+
+                        <div>
+                            <h3>Rolesplaying</h3>
+                            <ul className="list-disc list-inside">
+                                {currentCharacter.roleplaying && currentCharacter.roleplaying.map((role, idx) => (
+                                    <li key={idx}>{role}</li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <p>Background: {currentCharacter.background}</p>
+                        </div>
+                    </div>
+                ) : (<div>Please select a character</div>)}
+
+            </div>
         </div>
     );
 };
