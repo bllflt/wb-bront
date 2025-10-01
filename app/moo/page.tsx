@@ -5,6 +5,7 @@ import CharacterDataService from '../_lib/CharacterService'
 import AttributeListEditor from "../_components/AttributeListEditor";
 import Button from "react-bootstrap/Button";
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { create } from "domain";
 
 
 interface CharacterData {
@@ -16,10 +17,11 @@ interface CharacterData {
     roleplaying: string[];
     background: string;
 }
+type CharacterDataWithoutID = Omit<CharacterData, 'id'>;
 
 const CharacterList = () => {
     const [characters, setCharacters] = useState<CharacterData[]>([]);
-    const [currentCharacter, setCurrentCharacter] = useState<CharacterData | null>(null);
+    const [currentCharacter, setCurrentCharacter] = useState<CharacterData | CharacterDataWithoutID | null>(null);
     const [message, setMessage] = useState("");
 
     useEffect(() => {
@@ -64,6 +66,18 @@ const CharacterList = () => {
             });
     };
 
+    const createCharacter = () => {
+        CharacterDataService.create(currentCharacter)
+            .then(response => {
+                console.log(response.data);
+                retrieveCharacters();
+                setCurrentCharacter(response.data);
+            })
+            .catch(e => {
+                console.log(e);
+            });
+    };
+
     const deleteCharacter = () => {
         CharacterDataService.remove(currentCharacter.id)
             .then(response => {
@@ -92,14 +106,13 @@ const CharacterList = () => {
 
                 <Button variant="primary"
                     onClick={() => setCurrentCharacter({
-                        id: 0,
                         roleplaying: [],
                         images: [],
                         name: "",
                         appearance: "",
                         background: "",
                         sex: 9,
-                    } as CharacterData)}
+                    } as CharacterDataWithoutID)}
                 >+</Button>
             </div>
             <div>
@@ -160,15 +173,19 @@ const CharacterList = () => {
                                 </div>
 
                                 <Button
-                                    variant="danger"
-                                    onClick={deleteCharacter}>
-                                    Delete
+                                    variant="primary"
+                                    onClick={createCharacter}>
+                                    Create
                                 </Button>
-
                                 <Button
                                     variant="primary"
                                     onClick={updateCharacter}>
                                     Update
+                                </Button>
+                                <Button
+                                    variant="danger"
+                                    onClick={deleteCharacter}>
+                                    Delete
                                 </Button>
                                 <p>{message}</p>
 
