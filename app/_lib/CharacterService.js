@@ -4,6 +4,10 @@ const getAll = () => {
   return http.get("/characters?sort=name");
 };
 
+const getAllIDs = () => {
+  return http.get("/characters?fields=id,name&sort=name");
+}
+
 const get = id => {
   return http.get(`/characters/${id}`);
 };
@@ -27,6 +31,7 @@ const findByName = name => {
 
 const CharacterService = {
   getAll,
+  getAllIDs,
   get,
   create,
   update,

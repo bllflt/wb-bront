@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import CharacterDataService from '../_lib/CharacterService'
 import AttributeListEditor from "../_components/AttributeListEditor";
 import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { create } from "domain";
 
@@ -20,29 +21,36 @@ interface CharacterData {
 type CharacterDataWithoutID = Omit<CharacterData, 'id'>;
 
 const CharacterList = () => {
-    const [characters, setCharacters] = useState<CharacterData[]>([]);
+    const [characterIDs, setCharacterIDs] = useState<CharacterData[]>([]);
     const [currentCharacter, setCurrentCharacter] = useState<CharacterData | CharacterDataWithoutID | null>(null);
     const [message, setMessage] = useState("");
 
     useEffect(() => {
-        retrieveCharacters();
+        retrieveCharacterIDs();
     }, []);
 
-    const retrieveCharacters = () => {
-        CharacterDataService.getAll()
+    const retrieveCharacterIDs = () => {
+        CharacterDataService.getAllIDs()
             .then(response => {
-                setCharacters(response.data);
+                setCharacterIDs(response.data);
+                console.log(response.data);
+            })
+            .catch(e => {
+                console.log(e);
+            });
+    }
+
+
+    const handleCharacterChange = (id: string) => {
+        CharacterDataService.get(id)
+            .then(response => {
+                setCurrentCharacter(response.data);
                 console.log(response.data);
             })
             .catch(e => {
                 console.log(e);
             });
 
-    }
-
-    const handleChange = (name: string) => {
-        const item: any = characters.find((i) => i.name === name);
-        setCurrentCharacter(item);
     }
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
@@ -71,6 +79,7 @@ const CharacterList = () => {
             .then(response => {
                 console.log(response.data);
                 retrieveCharacters();
+                retrieveCharacterIDs();
                 setCurrentCharacter(response.data);
             })
             .catch(e => {
@@ -83,6 +92,7 @@ const CharacterList = () => {
             .then(response => {
                 console.log(response.data);
                 retrieveCharacters();
+                retrieveCharacterIDs();
                 setCurrentCharacter(null);
             })
             .catch(e => {
@@ -94,15 +104,15 @@ const CharacterList = () => {
     return (
         <div>
             <div>
-                <select
-                    value={currentCharacter && currentCharacter.name || "none"}
-                    onChange={e => handleChange(e.target.value)}
+                <Form.Select
+                    value={currentCharacter && currentCharacter.id || "none"}
+                    onChange={e => handleCharacterChange(e.target.value)}
                 >
                     <option value="none" disabled hidden> Select a Character</option>
-                    {characters.map((e, key) => {
-                        return <option value={e.name} key={key}> {e.name}</option>
+                    {characterIDs.map((e) => {
+                        return <option value={e.id} key={e.id}> {e.name}</option>
                     })}
-                </select>
+                </Form.Select>
 
                 <Button variant="primary"
                     onClick={() => setCurrentCharacter({

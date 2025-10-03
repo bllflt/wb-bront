@@ -42,7 +42,7 @@ const AttributeListEditor: React.FC<AttributeListEditorProps> = ({ attributes, o
             onClick={() => handleDelete(index)}
             className="bg-red-500 text-white px-2 py-1 rounded"
           >
-            Delete
+            -
           </button>
         </div>
       ))}
