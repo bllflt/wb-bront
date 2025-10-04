@@ -78,7 +78,6 @@ const CharacterList = () => {
         CharacterDataService.create(currentCharacter)
             .then(response => {
                 console.log(response.data);
-                retrieveCharacters();
                 retrieveCharacterIDs();
                 setCurrentCharacter(response.data);
             })
@@ -91,7 +90,6 @@ const CharacterList = () => {
         CharacterDataService.remove(currentCharacter.id)
             .then(response => {
                 console.log(response.data);
-                retrieveCharacters();
                 retrieveCharacterIDs();
                 setCurrentCharacter(null);
             })
