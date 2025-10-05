@@ -1,28 +1,29 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
-import CharacterDataService from '../_lib/CharacterService'
-import AttributeListEditor from "../_components/AttributeListEditor";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { create } from "domain";
-
+import React, { useEffect, useState } from "react";
+import Button from "react-bootstrap/Button";
+import Col from "react-bootstrap/Col";
+import Form from "react-bootstrap/Form";
+import Row from "react-bootstrap/Row";
+import AttributeListEditor from "../_components/AttributeListEditor";
+import CharacterDataService from '../_lib/CharacterService';
 
 interface CharacterData {
     id: number;
     name: string;
     appearance: string;
-    sex: Number;
+    sex: number;
     images: string[];
     roleplaying: string[];
     background: string;
 }
-type CharacterDataWithoutID = Omit<CharacterData, 'id'>;
+interface CharacterDataWithoutID extends Omit<CharacterData, 'id'> { };
 
 const CharacterList = () => {
     const [characterIDs, setCharacterIDs] = useState<CharacterData[]>([]);
-    const [currentCharacter, setCurrentCharacter] = useState<CharacterData | CharacterDataWithoutID | null>(null);
+    const [currentCharacter, setCurrentCharacter] = useState<CharacterDataWithoutID | null>(null);
+    const [currentCharacterID, setCurrentCharacterID] = useState<number | null>(null);
     const [message, setMessage] = useState("");
 
     useEffect(() => {
@@ -33,7 +34,6 @@ const CharacterList = () => {
         CharacterDataService.getAllIDs()
             .then(response => {
                 setCharacterIDs(response.data);
-                console.log(response.data);
             })
             .catch(e => {
                 console.log(e);
@@ -44,8 +44,9 @@ const CharacterList = () => {
     const handleCharacterChange = (id: string) => {
         CharacterDataService.get(id)
             .then(response => {
-                setCurrentCharacter(response.data);
-                console.log(response.data);
+                setCurrentCharacterID(response.data.id);
+                const { id, ...restOfResponseData } = response.data;
+                setCurrentCharacter(restOfResponseData);
             })
             .catch(e => {
                 console.log(e);
@@ -55,18 +56,17 @@ const CharacterList = () => {
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const { name, value } = event.target;
-        setCurrentCharacter({ ...currentCharacter, [name]: value });
+        setCurrentCharacter({ ...currentCharacter, [name]: value } as CharacterDataWithoutID);
     };
 
 
     const handleAttributesChange = (newAttributes: string[]) => {
-        setCurrentCharacter({ ...currentCharacter, roleplaying: newAttributes });
+        setCurrentCharacter({ ...currentCharacter, roleplaying: newAttributes } as CharacterDataWithoutID);
     };
 
     const updateCharacter = () => {
-        CharacterDataService.update(currentCharacter.id, currentCharacter)
+        CharacterDataService.update(currentCharacterID, currentCharacter)
             .then(response => {
-                console.log(response.data);
                 setMessage("The character was updated successfully!");
             })
             .catch(e => {
@@ -77,9 +77,10 @@ const CharacterList = () => {
     const createCharacter = () => {
         CharacterDataService.create(currentCharacter)
             .then(response => {
-                console.log(response.data);
                 retrieveCharacterIDs();
-                setCurrentCharacter(response.data);
+                setCurrentCharacterID(response.data.id);
+                const { id, ...restOfResponseData } = response.data;
+                setCurrentCharacter(restOfResponseData);
             })
             .catch(e => {
                 console.log(e);
@@ -87,10 +88,10 @@ const CharacterList = () => {
     };
 
     const deleteCharacter = () => {
-        CharacterDataService.remove(currentCharacter.id)
+        CharacterDataService.remove(currentCharacterID)
             .then(response => {
-                console.log(response.data);
                 retrieveCharacterIDs();
+                setCurrentCharacterID(null);
                 setCurrentCharacter(null);
             })
             .catch(e => {
@@ -101,28 +102,36 @@ const CharacterList = () => {
 
     return (
         <div>
-            <div>
-                <Form.Select
-                    value={currentCharacter && currentCharacter.id || "none"}
-                    onChange={e => handleCharacterChange(e.target.value)}
-                >
-                    <option value="none" disabled hidden> Select a Character</option>
-                    {characterIDs.map((e) => {
-                        return <option value={e.id} key={e.id}> {e.name}</option>
-                    })}
-                </Form.Select>
+            <Form>
+                <Row>
+                    <Col>
+                        <Form.Select
+                            data-width="auto"
+                            value={currentCharacterID || "none"}
+                            onChange={e => handleCharacterChange(e.target.value)}
+                        >
+                            <option value="none" disabled hidden> Select a Character</option>
+                            {characterIDs.map((e) => {
+                                return <option value={e.id} key={e.id}> {e.name}</option>
+                            })}
+                        </Form.Select>
+                    </Col>
+                    <Col>
+                        <Button variant="primary"
+                            onClick={() => setCurrentCharacter({
+                                roleplaying: [],
+                                images: [],
+                                name: "",
+                                appearance: "",
+                                background: "",
+                                sex: 9,
+                            } as CharacterDataWithoutID)}
+                        >+</Button>
+                    </Col>
+                </Row>
+            </Form>
 
-                <Button variant="primary"
-                    onClick={() => setCurrentCharacter({
-                        roleplaying: [],
-                        images: [],
-                        name: "",
-                        appearance: "",
-                        background: "",
-                        sex: 9,
-                    } as CharacterDataWithoutID)}
-                >+</Button>
-            </div>
+
             <div>
                 {currentCharacter ? (
                     <div className="flex flex-row gap-6">
@@ -139,46 +148,70 @@ const CharacterList = () => {
                         </div>
                         {/* Text fields column */}
                         <div className="w-2/3 flex flex-col gap-4">
-                            <form>
-                                <div>
-                                    <label>
-                                        Name:
-                                        <input type="text" name="name"
-                                            value={currentCharacter.name}
-                                            onChange={handleInputChange}
-                                            className="w-full border rounded px-2 py-1" />
-                                    </label>
-                                </div>
-                                <div>
-                                    <label htmlFor="appearance" className="block font-bold mb-1"> Appearance:</label>
-                                    <textarea
+                            <Form>
+                                <Row>
+                                    <Col>
+                                        <Form.Group controlId="name">
+                                            <Form.Label>Name:</Form.Label>
+                                            <Form.Control
+                                                type="text"
+                                                name="name"
+                                                value={currentCharacter.name}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter name"
+                                            />
+                                        </Form.Group>
+                                    </Col>
+                                    <Col>
+                                        <Form.Group controlId="sex">
+                                            <Form.Label>Sex:</Form.Label>
+                                            <Form.Control
+                                                as="select"
+                                                name="sex"
+                                                value={currentCharacter.sex}
+                                                onChange={handleInputChange}
+                                            >
+                                                <option value="none" disabled hidden>Select sex</option>
+                                                <option value={0}>Not known</option>
+                                                <option value={1}>Male</option>
+                                                <option value={2}>Female</option>
+                                                <option value={9}>Not applicable</option>
+                                            </Form.Control>
+                                        </Form.Group>
+                                    </Col>
+                                </Row>
+
+                                <Form.Group controlId="appearance">
+                                    <Form.Label>Appearance:</Form.Label>
+                                    <Form.Control
+                                        as="textarea"
                                         name="appearance"
-                                        id="appearance"
                                         value={currentCharacter.appearance}
                                         onChange={handleInputChange}
+                                        placeholder="Enter appearance"
                                         rows={4}
-                                        className="w-full border rounded px-2 py-1"
                                     />
+                                </Form.Group>
 
-                                </div>
                                 <div>
-                                    <label className="block font-bold mb-1">Attributes</label>
+                                    <label>Attributes:</label>
                                     <AttributeListEditor
                                         attributes={currentCharacter.roleplaying}
                                         onChange={handleAttributesChange}
                                     />
                                 </div>
-                                <div>
-                                    <label htmlFor="background" className="block font-bold mb-1">Background</label>
-                                    <textarea
+
+                                <Form.Group controlId="background">
+                                    <Form.Label>Background:</Form.Label>
+                                    <Form.Control
+                                        as="textarea"
                                         name="background"
-                                        id="background"
                                         value={currentCharacter.background}
                                         onChange={handleInputChange}
-                                        className="w-full border rounded px-2 py-1"
+                                        placeholder="Enter background"
                                         rows={14}
                                     />
-                                </div>
+                                </Form.Group>
 
                                 <Button
                                     variant="primary"
@@ -196,8 +229,8 @@ const CharacterList = () => {
                                     Delete
                                 </Button>
                                 <p>{message}</p>
+                            </Form>
 
-                            </form>
                         </div>
                     </div>
                 ) : (
