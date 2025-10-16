@@ -8,6 +8,7 @@ import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import AttributeListEditor from "../_components/AttributeListEditor";
 import CharacterDataService from '../_lib/CharacterService';
+import FamilyTree from '../_components/FamilyTree';
 
 interface CharacterData {
     id: number;
@@ -145,6 +146,9 @@ const CharacterList = () => {
                                     className="mb-2 max-w-full max-h-40 object-contain"
                                 />
                             ))}
+                            {currentCharacterID && (
+                                <FamilyTree characterId={currentCharacterID} />
+                            )}
                         </div>
                         {/* Text fields column */}
                         <div className="w-2/3 flex flex-col gap-4">

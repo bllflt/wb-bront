@@ -29,6 +29,11 @@ const findByName = name => {
   return http.get(`/characters?name=${name}`);
 };
 
+const getCharacterConnections = id => {
+  return http.get(`/characters/${id}/connections`);
+};
+
+
 const CharacterService = {
   getAll,
   getAllIDs,
@@ -36,7 +41,8 @@ const CharacterService = {
   create,
   update,
   remove,
-  findByName
+  findByName,
+  getCharacterConnections,
 };
 
 export default CharacterService;
