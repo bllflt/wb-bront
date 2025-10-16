@@ -6,9 +6,9 @@ import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
-import AttributeListEditor from "../_components/AttributeListEditor";
-import CharacterDataService from '../_lib/CharacterService';
-import FamilyTree from '../_components/FamilyTree';
+import AttributeListEditor from "./_components/AttributeListEditor";
+import CharacterDataService from './_lib/CharacterService';
+import FamilyTree from './_components/FamilyTree';
 
 interface CharacterData {
     id: number;
