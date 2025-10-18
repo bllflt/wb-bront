@@ -33,6 +33,10 @@ const getCharacterConnections = id => {
   return http.get(`/characters/${id}/connections`);
 };
 
+const twist = id => {
+  return http.get(`/characters/${id}/connections2`);
+};
+
 
 const CharacterService = {
   getAll,
@@ -43,6 +47,7 @@ const CharacterService = {
   remove,
   findByName,
   getCharacterConnections,
+  twist
 };
 
 export default CharacterService;

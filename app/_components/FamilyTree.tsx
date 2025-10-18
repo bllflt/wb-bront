@@ -4,7 +4,7 @@ import cytoscape from 'cytoscape';
 import dagre from 'cytoscape-dagre';
 import React, { useEffect, useState } from 'react';
 import CytoscapeComponent from 'react-cytoscapejs';
-import CharacterDataService from '../_lib/CharacterService';
+import CharacterService from '../_lib/CharacterService';
 
 // Register the Dagre layout extension
 cytoscape.use(dagre);
@@ -116,7 +116,7 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId }) => {
       return;
     }
     const retrieveCharacterConnections = () => {
-      CharacterDataService.getCharacterConnections(characterId)
+      CharacterService.getCharacterConnections(characterId)
         .then(response => {
           const elements = response.data;
           const compoundNodes: cytoscape.ElementDefinition[] = [];

@@ -7,8 +7,11 @@ import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import AttributeListEditor from "./_components/AttributeListEditor";
-import CharacterDataService from './_lib/CharacterService';
+import RelationsListEditor from "./_components/RelathionsListEditor";
 import FamilyTree from './_components/FamilyTree';
+import CharacterDataService from './_lib/CharacterService';
+import Tab from 'react-bootstrap/Tab';
+import Tabs from 'react-bootstrap/Tabs';
 
 interface CharacterData {
     id: number;
@@ -21,10 +24,23 @@ interface CharacterData {
 }
 interface CharacterDataWithoutID extends Omit<CharacterData, 'id'> { };
 
+interface CharacterUnions {
+    value: number;
+    label: string;
+}
+
+interface CharacterRelations {
+    type: number;
+    source: number;
+    target: number;
+}
+
 const CharacterList = () => {
     const [characterIDs, setCharacterIDs] = useState<CharacterData[]>([]);
     const [currentCharacter, setCurrentCharacter] = useState<CharacterDataWithoutID | null>(null);
     const [currentCharacterID, setCurrentCharacterID] = useState<number | null>(null);
+    const [relations, setRelations] = useState<CharacterRelations[]>([]);
+    const [currentUnions, setUnions] = useState<CharacterUnions[]>([]);
     const [message, setMessage] = useState("");
 
     useEffect(() => {
@@ -42,17 +58,46 @@ const CharacterList = () => {
     }
 
 
+    const expandrelations = (list: any, character: CharacterDataWithoutID) => {
+        const charUnion = [];
+        const charRelations = [];
+        for (var i = 0; i < list.length; ++i) {
+            /* Marriage */
+            console.log(list[i])
+            if ([1, 2, 3, 4, 5, 6].includes(list[i].type)) {
+                charUnion.push({ 'value': list[i].id, 'label': [character.name, ...list[i].with.map(p => p.name)].filter(Boolean).join(', ') });
+                for (var j = 0; j < list[i].with.length; ++j) {
+                    charRelations.push({ 'type': list[i].type, 'source': list[i].id, 'target': list[i].with[j].id })
+                };
+            }
+            for (var j = 0; j < list[i].children.length; ++j) {
+                charRelations.push({ 'type': 7, 'source': list[i].id, 'target': list[i].children[j].id });
+            }
+        }
+        return { 'unions': charUnion, 'relations': charRelations };
+    }
+
+
+
+
+
     const handleCharacterChange = (id: string) => {
-        CharacterDataService.get(id)
-            .then(response => {
-                setCurrentCharacterID(response.data.id);
-                const { id, ...restOfResponseData } = response.data;
-                setCurrentCharacter(restOfResponseData);
+        Promise.all([CharacterDataService.get(id), CharacterDataService.twist(id)])
+            .then(([charResponse, twistResponse]) => {
+                const { id: charId, ...restOfCharData } = charResponse.data;
+                setCurrentCharacterID(charId);
+                setCurrentCharacter(restOfCharData);
+
+                const expanded = expandrelations(twistResponse.data, restOfCharData);
+
+                setUnions(expanded?.unions || []);
+                setRelations(expanded?.relations || []);
             })
             .catch(e => {
                 console.log(e);
+                // It's good practice to handle potential UI state in case of an error
+                setMessage("Failed to load character data.");
             });
-
     }
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
@@ -64,6 +109,12 @@ const CharacterList = () => {
     const handleAttributesChange = (newAttributes: string[]) => {
         setCurrentCharacter({ ...currentCharacter, roleplaying: newAttributes } as CharacterDataWithoutID);
     };
+
+    const handleRelationChange = (newRelations: string[]) => {
+        setRelations(newRelations);
+        console.log(relations);
+    };
+
 
     const updateCharacter = () => {
         CharacterDataService.update(currentCharacterID, currentCharacter)
@@ -197,6 +248,7 @@ const CharacterList = () => {
                                     />
                                 </Form.Group>
 
+
                                 <div>
                                     <label>Attributes:</label>
                                     <AttributeListEditor
@@ -205,17 +257,28 @@ const CharacterList = () => {
                                     />
                                 </div>
 
-                                <Form.Group controlId="background">
-                                    <Form.Label>Background:</Form.Label>
-                                    <Form.Control
-                                        as="textarea"
-                                        name="background"
-                                        value={currentCharacter.background}
-                                        onChange={handleInputChange}
-                                        placeholder="Enter background"
-                                        rows={14}
-                                    />
-                                </Form.Group>
+                                <Tabs defaultActiveKey="background" id="character-details-tabs" fill>
+                                    <Tab eventKey="background" title="Background">
+                                        <Form.Control
+                                            as="textarea"
+                                            name="background"
+                                            value={currentCharacter.background}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter background"
+                                            rows={14}
+                                            className="mt-2"
+                                        />
+                                    </Tab>
+                                    <Tab eventKey="key-relations" title="Key Relations" id="keyrelations-tab">
+                                        <RelationsListEditor
+                                            relations={relations}
+                                            unions={currentUnions}
+                                            onChange={handleRelationChange}
+                                            characterIDs={characterIDs}
+                                        />
+
+                                    </Tab>
+                                </Tabs>
 
                                 <Button
                                     variant="primary"
@@ -244,6 +307,6 @@ const CharacterList = () => {
             </div >
         </div >
     );
-};
 
+}
 export default CharacterList;
