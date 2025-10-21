@@ -47,7 +47,6 @@ const CharacterService = {
   remove,
   findByName,
   getCharacterConnections,
-  twist
 };
 
 export default CharacterService;

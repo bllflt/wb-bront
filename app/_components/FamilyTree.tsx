@@ -115,10 +115,40 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId }) => {
     if (!characterId) {
       return;
     }
+
+    const expander = (list: any) => {
+
+      const rv = [];
+      const seen = new Set();
+
+
+      for (var i = 0; i < list.length; ++i) {
+        rv.push({ 'data': { 'id': 'p' + list[i].id, 'type': list[i].type } });
+        for (var j = 0; j < list[i].participants.length; ++j) {
+          if (!seen.has(list[i].participants[j].id)) {
+            rv.push({ 'data': { 'id': list[i].participants[j].id, 'gender': list[i].participants[j].sex, 'label': list[i].participants[j].name } });
+            seen.add(list[i].participants[j].id);
+          }
+          rv.push({ 'data': { 'source': list[i].participants[j].id, 'target': 'p' + list[i].id, 'type': list[i].type } });
+        }
+        if ('children' in (list[i])) {
+          for (var j = 0; j < list[i].children.length; ++j) {
+            if (!seen.has(list[i].children[j].id)) {
+              rv.push({ 'data': { 'id': list[i].children[j].id, 'gender': list[i].children[j].sex, 'label': list[i].children[j].name } });
+              seen.add(list[i].children[j].id);
+            }
+            rv.push({ 'data': { 'source': list[i].children[j].id, 'target': 'p' + list[i].id, 'type': 3 } });
+          }
+        }
+      }
+      return rv;
+    }
+
     const retrieveCharacterConnections = () => {
       CharacterService.getCharacterConnections(characterId)
         .then(response => {
-          const elements = response.data;
+          const elements = expander(response.data);
+          console.log(elements);
           const compoundNodes: cytoscape.ElementDefinition[] = [];
 
           const processedElements = elements.map((el: any) => {
@@ -130,7 +160,7 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId }) => {
                 if (newEl.data.gender === 1) newEl.data.gender = 'male';
                 if (newEl.data.gender === 2) newEl.data.gender = 'female';
               }
-              if (newEl.data.type === "1" || newEl.data.type === "2") {
+              if (newEl.data.type === 1 || newEl.data.type === 2) {
                 newEl.data.type = 'marriage_unit';
               }
             }

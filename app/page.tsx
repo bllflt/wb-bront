@@ -58,21 +58,28 @@ const CharacterList = () => {
     }
 
 
-    const expandrelations = (list: any, character: CharacterDataWithoutID) => {
+    const expandrelations = (list: any, currentCharacterID: number) => {
         const charUnion = [];
         const charRelations = [];
         for (var i = 0; i < list.length; ++i) {
             /* Marriage */
-            console.log(list[i])
+            console.log(list[i]);
+            console.log(currentCharacterID);
             if ([1, 2, 3, 4, 5, 6].includes(list[i].type)) {
-                charUnion.push({ 'value': list[i].id, 'label': [character.name, ...list[i].with.map(p => p.name)].filter(Boolean).join(', ') });
-                for (var j = 0; j < list[i].with.length; ++j) {
-                    charRelations.push({ 'type': list[i].type, 'source': list[i].id, 'target': list[i].with[j].id })
-                };
+                charUnion.push({ 'value': list[i].id, 'label': [list[i].participants.map(p => p.name)].filter(Boolean).join(', ') });
+
+                if (list[i].participants.map(p => p.id).includes(currentCharacterID)) {
+                    for (var j = 0; j < list[i].participants.length; ++j) {
+                        if (list[i].participants[j].id != currentCharacterID) {
+                            charRelations.push({ 'type': list[i].type, 'source': list[i].id, 'target': list[i].participants[j].id })
+                        }
+                    }
+                }
+                for (var j = 0; j < list[i].children.length; ++j) {
+                    charRelations.push({ 'type': 7, 'source': list[i].id, 'target': list[i].children[j].id });
+                }
             }
-            for (var j = 0; j < list[i].children.length; ++j) {
-                charRelations.push({ 'type': 7, 'source': list[i].id, 'target': list[i].children[j].id });
-            }
+
         }
         return { 'unions': charUnion, 'relations': charRelations };
     }
@@ -80,15 +87,14 @@ const CharacterList = () => {
 
 
 
-
     const handleCharacterChange = (id: string) => {
-        Promise.all([CharacterDataService.get(id), CharacterDataService.twist(id)])
+        Promise.all([CharacterDataService.get(id), CharacterDataService.getCharacterConnections(id)])
             .then(([charResponse, twistResponse]) => {
                 const { id: charId, ...restOfCharData } = charResponse.data;
                 setCurrentCharacterID(charId);
                 setCurrentCharacter(restOfCharData);
 
-                const expanded = expandrelations(twistResponse.data, restOfCharData);
+                const expanded = expandrelations(twistResponse.data, Number(id));
 
                 setUnions(expanded?.unions || []);
                 setRelations(expanded?.relations || []);
