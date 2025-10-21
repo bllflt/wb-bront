@@ -239,6 +239,7 @@ const CharacterList = () => {
                                             <RelationsListEditor
                                                 connections={connections}
                                                 onChange={handleRelationChange}
+                                                modifiedRelations={modifiedRelations}
                                                 characterIDs={characterIDs}
                                                 characterId={currentCharacterID}
                                             />

@@ -21,6 +21,7 @@ interface CharacterRelations { type: number; source: number; target: number; }
 interface RelationsListEditorProps {
     connections: any[];
     onChange: (newRelations: CharacterRelations[]) => void;
+    modifiedRelations: CharacterRelations[] | null;
     characterIDs: CharacterData[];
     characterId: number;
 }
@@ -181,16 +182,22 @@ const expandRelations = (connections: any[], currentCharacterId: number) => {
     return { unions, relations };
 };
 
-const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, onChange, characterIDs, characterId }) => {
+const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, onChange, modifiedRelations, characterIDs, characterId }) => {
     // Handle change of a single relation
     const [internalRelations, setInternalRelations] = useState<CharacterRelations[]>([]);
     const [internalUnions, setInternalUnions] = useState<CharacterUnions[]>([]);
 
     useEffect(() => {
-        const { unions, relations: expandedRelations } = expandRelations(connections, characterId);
-        setInternalUnions(unions);
-        setInternalRelations(expandedRelations);
-    }, [connections, characterId]);
+        if (modifiedRelations) {
+            // If there are modified relations, use them directly
+            setInternalRelations(modifiedRelations);
+        } else {
+            // Otherwise, expand the initial connections from the API
+            const { unions, relations: expandedRelations } = expandRelations(connections, characterId);
+            setInternalUnions(unions);
+            setInternalRelations(expandedRelations);
+        }
+    }, [connections, characterId, modifiedRelations]);
     const handleRelationChange = (index: number, field: string, value: string) => {
         const updated = [...internalRelations];
         const newRelation = { ...updated[index], [field]: value };
