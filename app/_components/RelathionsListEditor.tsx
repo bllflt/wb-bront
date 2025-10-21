@@ -2,8 +2,12 @@
 
 import React from "react";
 import Form from "react-bootstrap/Form";
-import { CharacterUnions } from "../page"; // This line is correct, the error message is misleading.
-import { CharacterRelations } from "../page"; // This line is correct, the error message is misleading.
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
+import { useEffect, useState } from "react";
+
+const SIBLING_RELATIONSHIP_TYPE = 25;
+const PARENT_RELATIONSIP_TYPE = 7;
 
 
 interface CharacterData {
@@ -11,119 +15,206 @@ interface CharacterData {
     name: string;
 }
 
+interface CharacterUnions { value: number; label: string; }
+interface CharacterRelations { type: number; source: number; target: number; }
+
 interface RelationsListEditorProps {
-    relations: CharacterRelations[];
-    onChange: (newRelations: Record<string, string>[]) => void;
+    connections: any[];
+    onChange: (newRelations: CharacterRelations[]) => void;
     characterIDs: CharacterData[];
-    unions: CharacterUnions[];
+    characterId: number;
 }
 
 interface RelationshipEditorProps {
     relation: CharacterRelations;
     characterIDs: CharacterData[];
+    characterId: number;
     onRelationChange: (field: string, value: string) => void;
     unions: CharacterUnions[];
+    onDelete: () => void;
 }
 
-const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, unions, characterIDs, onRelationChange }) => {
+const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, unions, characterIDs, characterId, onRelationChange, onDelete }) => {
     const { type = "", target = "", source = "" } = relation;
 
-    const isParental = type === 7 || type === "7"; // "Parent"
+
+    const isParental = type == PARENT_RELATIONSIP_TYPE; // "Parents"
+    const isSibling = type == SIBLING_RELATIONSHIP_TYPE; // "Sibling"
+    const targetCharacterName = isSibling ? characterIDs.find(c => c.id == target)?.name : '';
 
     return (
-        <div>
-            {!isParental && ( // For non-parental relationships
-                <div className="flex items-center gap-2">
-                    <Form.Select
-                        style={{ width: 'auto' }}
-                        value={type}
-                        onChange={(e) => onRelationChange('type', e.target.value)}
+        <Row className="align-items-center">
+            <Col>
+                {!isParental && !isSibling && ( // For standard editable relationships
+                    <div className="flex items-center gap-2">
+                        <Form.Select
+                            style={{ width: 'auto' }}
+                            value={type}
+                            onChange={(e) => onRelationChange('type', e.target.value)}
+                        >
+                            <option value="" disabled>Select Relationship</option>
+                            <option value="1">Spouse</option>
+                            <option value="2">Concubine</option>
+                            <option value="3">Consort</option>
+                            <option value="4">Betrothed</option>
+                            <option value="5">Lover</option>
+                            <option value="6">Paramour</option>
+                            <option value="7">Parents</option>
+                            {/* Other non-parental relationships */}
+                            <option value="8">Child</option>
+                            <option value="9">Guardian</option>
+                            <option value="10">Ward</option>
+                            <option value="11">Mentor</option>
+                            <option value="12">Lord</option>
+                            <option value="13">Vassal</option>
+                            <option value="14">Patron</option>
+                            <option value="15">Client</option>
+                            <option value="16">Protégé</option>
+                            <option value="17">Employer</option>
+                            <option value="18">Employee</option>
+                            <option value="19">Master</option>
+                            <option value="20">Friend</option>
+                            <option value="21">Commander</option>
+                            <option value="22">Subordinate</option>
+                            <option value="23">Lord</option>
+                            <option value="24">Retainer</option>
+                        </Form.Select>
+                        <Form.Select
+                            style={{ width: 'auto' }}
+                            value={target}
+                            onChange={(e) => onRelationChange('target', e.target.value)}
+                        >
+                            <option value="" disabled hidden> Select a Character</option>
+                            {characterIDs.map((e) => {
+                                return <option value={e.id} key={e.id}> {e.name}</option>
+                            })}
+                        </Form.Select>
+                    </div>
+                )}
+                {isParental && ( // For parental relationships
+                    <div className="flex items-center flex-wrap gap-2">
+                        <Form.Select
+                            style={{ width: 'auto' }}
+                            value={source}
+                            onChange={(e) => onRelationChange('source', e.target.value)}
+                        >
+                            <option value="" disabled>Select a Parent</option>
+                            {unions.map((e) => (
+                                <option value={e.value} key={`partner-${e.value}`}> {e.label}</option>
+                            ))}
+                        </Form.Select>
+                        <span>are the Parents of</span>
+                        <Form.Select
+                            style={{ width: 'auto' }}
+                            value={target}
+                            onChange={(e) => onRelationChange('target', e.target.value)}
+                        >
+                            <option value="none" disabled hidden> Select a Parent</option>
+                            {characterIDs.map((e) => (
+                                <option value={e.id} key={`target-${e.id}`}> {e.name}</option>
+                            ))}
+                        </Form.Select>
+                    </div>
+                )}
+                {isSibling && ( // For sibling relationships (static text)
+                    <div className="flex items-center gap-2 p-2">
+                        <span>Sibling: <strong>{targetCharacterName}</strong></span>
+                    </div>
+                )}
+            </Col>
+            {!isSibling && (
+                <Col xs="auto">
+                    <button
+                        type="button"
+                        onClick={onDelete}
+                        className="bg-red-500 text-white px-2 py-1 rounded"
                     >
-                        <option value="" disabled>Select Relationship</option>
-                        <option value="1">Spouse</option>
-                        <option value="2">Concubine</option>
-                        <option value="3">Consort</option>
-                        <option value="4">Betrothed</option>
-                        <option value="5">Lover</option>
-                        <option value="6">Paramour</option>
-                        <option value="7">Parents</option>
-                        {/* Other non-parental relationships */}
-                        <option value="8">Child</option>
-                        <option value="9">Guardian</option>
-                        <option value="10">Ward</option>
-                        <option value="11">Mentor</option>
-                        <option value="12">Lord</option>
-                        <option value="13">Vassal</option>
-                        <option value="14">Patron</option>
-                        <option value="15">Client</option>
-                        <option value="16">Protégé</option>
-                        <option value="17">Employer</option>
-                        <option value="18">Employee</option>
-                        <option value="19">Master</option>
-                        <option value="20">Friend</option>
-                        <option value="21">Commander</option>
-                        <option value="22">Subordinate</option>
-                        <option value="23">Lord</option>
-                        <option value="24">Retainer</option>
-                    </Form.Select>
-                    <Form.Select
-                        style={{ width: 'auto' }}
-                        value={target}
-                        onChange={(e) => onRelationChange('target', e.target.value)}
-                    >
-                        <option value="none" disabled hidden> Select a Character</option>
-                        {characterIDs.map((e) => {
-                            return <option value={e.id} key={e.id}> {e.name}</option>
-                        })}
-                    </Form.Select>
-                </div>
+                        -
+                    </button>
+                </Col>
             )}
-            {isParental && ( // For parental relationships
-                <div className="flex items-center flex-wrap gap-2">
-                    <Form.Select
-                        style={{ width: 'auto' }}
-                        value={source}
-                        onChange={(e) => onRelationChange('source', e.target.value)}
-                    >
-                        <option value="" disabled>Select a Parent</option>
-                        {unions.map((e) => (
-                            <option value={e.value} key={`partner-${e.id}`}> {e.label}</option>
-                        ))}
-                    </Form.Select>
-                    <span>are the Parents of</span>
-                    <Form.Select
-                        style={{ width: 'auto' }}
-                        value={target}
-                        onChange={(e) => onRelationChange('target', e.target.value)}
-                    >
-                        <option value="none" disabled hidden> Select a Parent</option>
-                        {characterIDs.map((e) => (
-                            <option value={e.id} key={`target-${e.id}`}> {e.name}</option>
-                        ))}
-                    </Form.Select>
-                </div>
-            )}
-        </div>
+        </Row>
     )
 }
 
-const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ relations, unions, onChange, characterIDs }) => {
+const expandRelations = (connections: any[], currentCharacterId: number) => {
+    const unions: CharacterUnions[] = [];
+    const relations: CharacterRelations[] = [];
+    const siblingMap = new Map<number, { name: string }>();
+
+    for (const union of connections) {
+        // Process Unions (Marriages, etc.)
+        if ([1, 2, 3, 4, 5, 6].includes(union.type)) {
+            unions.push({ value: union.id, label: union.participants.map((p: any) => p.name).join(' & ') });
+
+            // Create editable relations for the current character's partners
+            if (union.participants.some((p: any) => p.id === currentCharacterId)) {
+                for (const participant of union.participants) {
+                    if (participant.id !== currentCharacterId) {
+                        relations.push({ type: union.type, source: union.id, target: participant.id });
+                    }
+                }
+            }
+
+            // Create editable relations for children of this union
+            for (const child of union.children) {
+                relations.push({ type: 7, source: union.id, target: child.id });
+            }
+
+            // Find siblings of the current character
+            const isCurrentCharChild = union.children.some((c: any) => c.id === currentCharacterId);
+            if (isCurrentCharChild) {
+                for (const sibling of union.children) {
+                    if (sibling.id !== currentCharacterId && !siblingMap.has(sibling.id)) {
+                        siblingMap.set(sibling.id, { name: sibling.name });
+                    }
+                }
+            }
+        }
+    }
+
+    // Add all unique siblings as non-editable relations
+    siblingMap.forEach((_sibling, id) => {
+        relations.push({ type: SIBLING_RELATIONSHIP_TYPE, source: 0, target: id });
+    });
+
+    return { unions, relations };
+};
+
+const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, onChange, characterIDs, characterId }) => {
     // Handle change of a single relation
+    const [internalRelations, setInternalRelations] = useState<CharacterRelations[]>([]);
+    const [internalUnions, setInternalUnions] = useState<CharacterUnions[]>([]);
+
+    useEffect(() => {
+        const { unions, relations: expandedRelations } = expandRelations(connections, characterId);
+        setInternalUnions(unions);
+        setInternalRelations(expandedRelations);
+    }, [connections, characterId]);
     const handleRelationChange = (index: number, field: string, value: string) => {
-        const updated = [...relations];
-        updated[index] = { ...updated[index], [field]: value };
+        const updated = [...internalRelations];
+        const newRelation = { ...updated[index], [field]: value };
+
+        // If the type is changed to 'Parents', reset the other fields
+        if (field === 'type' && value == PARENT_RELATIONSIP_TYPE) {
+            newRelation.source = "";
+            newRelation.target = "";
+        }
+        updated[index] = newRelation;
         onChange(updated);
     };
 
     // Delete a relation
     const handleRelationDelete = (index: number) => {
-        const updated = relations.filter((_, i) => i !== index);
+        const updated = internalRelations.filter((_, i) => i !== index);
         onChange(updated);
     };
 
     // Add a new relation
     const handleRelationAdd = () => {
-        onChange([...relations, { type: '', target: '', partner: '' }]);
+        const newRelations = [...internalRelations, { type: "", source: "", target: "" }];
+        setInternalRelations(newRelations); // Update internal state first
+        onChange(newRelations); // Then notify parent
     };
 
 
@@ -131,22 +222,17 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ relations, un
 
     return (
         <div className="space-y-2">
-            {relations && relations.length > 0 && (
-                relations.map((relation, index) => (
+            {internalRelations && internalRelations.length > 0 && (
+                internalRelations.map((relation, index) => (
                     <div key={index} className="flex items-center space-x-2">
                         <RelationshipEditor
-                            unions={unions}
+                            unions={internalUnions}
                             relation={relation}
                             characterIDs={characterIDs}
+                            characterId={characterId}
+                            onDelete={() => handleRelationDelete(index)}
                             onRelationChange={(field, value) => handleRelationChange(index, field, value)}
                         />
-                        <button
-                            type="button"
-                            onClick={() => handleRelationDelete(index)}
-                            className="bg-red-500 text-white px-2 py-1 rounded"
-                        >
-                            -
-                        </button>
                     </div>
                 )))
             }
@@ -156,6 +242,14 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ relations, un
                 className="bg-blue-500 text-white px-3 py-1 rounded"
             >
                 + Add Relation
+            </button>
+
+            <button
+                type="button"
+                onClick={() => console.log(internalRelations)}
+                className="bg-blue-500 text-white px-3 py-1 rounded"
+            >
+                Log Relations
             </button>
         </div >
     );

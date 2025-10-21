@@ -23,24 +23,14 @@ interface CharacterData {
     background: string;
 }
 interface CharacterDataWithoutID extends Omit<CharacterData, 'id'> { };
-
-interface CharacterUnions {
-    value: number;
-    label: string;
-}
-
-interface CharacterRelations {
-    type: number;
-    source: number;
-    target: number;
-}
+interface CharacterRelations { type: number; source: number; target: number; }
 
 const CharacterList = () => {
     const [characterIDs, setCharacterIDs] = useState<CharacterData[]>([]);
     const [currentCharacter, setCurrentCharacter] = useState<CharacterDataWithoutID | null>(null);
     const [currentCharacterID, setCurrentCharacterID] = useState<number | null>(null);
-    const [relations, setRelations] = useState<CharacterRelations[]>([]);
-    const [currentUnions, setUnions] = useState<CharacterUnions[]>([]);
+    const [connections, setConnections] = useState<any[]>([]);
+    const [modifiedRelations, setModifiedRelations] = useState<CharacterRelations[] | null>(null);
     const [message, setMessage] = useState("");
 
     useEffect(() => {
@@ -57,47 +47,14 @@ const CharacterList = () => {
             });
     }
 
-
-    const expandrelations = (list: any, currentCharacterID: number) => {
-        const charUnion = [];
-        const charRelations = [];
-        for (var i = 0; i < list.length; ++i) {
-            /* Marriage */
-            console.log(list[i]);
-            console.log(currentCharacterID);
-            if ([1, 2, 3, 4, 5, 6].includes(list[i].type)) {
-                charUnion.push({ 'value': list[i].id, 'label': [list[i].participants.map(p => p.name)].filter(Boolean).join(', ') });
-
-                if (list[i].participants.map(p => p.id).includes(currentCharacterID)) {
-                    for (var j = 0; j < list[i].participants.length; ++j) {
-                        if (list[i].participants[j].id != currentCharacterID) {
-                            charRelations.push({ 'type': list[i].type, 'source': list[i].id, 'target': list[i].participants[j].id })
-                        }
-                    }
-                }
-                for (var j = 0; j < list[i].children.length; ++j) {
-                    charRelations.push({ 'type': 7, 'source': list[i].id, 'target': list[i].children[j].id });
-                }
-            }
-
-        }
-        return { 'unions': charUnion, 'relations': charRelations };
-    }
-
-
-
-
     const handleCharacterChange = (id: string) => {
         Promise.all([CharacterDataService.get(id), CharacterDataService.getCharacterConnections(id)])
             .then(([charResponse, twistResponse]) => {
                 const { id: charId, ...restOfCharData } = charResponse.data;
                 setCurrentCharacterID(charId);
                 setCurrentCharacter(restOfCharData);
-
-                const expanded = expandrelations(twistResponse.data, Number(id));
-
-                setUnions(expanded?.unions || []);
-                setRelations(expanded?.relations || []);
+                setConnections(twistResponse.data || []);
+                setModifiedRelations(null); // Reset modified relations on character change
             })
             .catch(e => {
                 console.log(e);
@@ -116,9 +73,8 @@ const CharacterList = () => {
         setCurrentCharacter({ ...currentCharacter, roleplaying: newAttributes } as CharacterDataWithoutID);
     };
 
-    const handleRelationChange = (newRelations: string[]) => {
-        setRelations(newRelations);
-        console.log(relations);
+    const handleRelationChange = (newRelations: CharacterRelations[]) => {
+        setModifiedRelations(newRelations);
     };
 
 
@@ -176,14 +132,17 @@ const CharacterList = () => {
                     </Col>
                     <Col>
                         <Button variant="primary"
-                            onClick={() => setCurrentCharacter({
-                                roleplaying: [],
-                                images: [],
-                                name: "",
-                                appearance: "",
-                                background: "",
-                                sex: 9,
-                            } as CharacterDataWithoutID)}
+                            onClick={() => {
+                                setCurrentCharacterID(null);
+                                setCurrentCharacter({
+                                    roleplaying: [],
+                                    images: [],
+                                    name: "",
+                                    appearance: "",
+                                    background: "",
+                                    sex: 9,
+                                } as CharacterDataWithoutID)
+                            }}
                         >+</Button>
                     </Col>
                 </Row>
@@ -276,12 +235,14 @@ const CharacterList = () => {
                                         />
                                     </Tab>
                                     <Tab eventKey="key-relations" title="Key Relations" id="keyrelations-tab">
-                                        <RelationsListEditor
-                                            relations={relations}
-                                            unions={currentUnions}
-                                            onChange={handleRelationChange}
-                                            characterIDs={characterIDs}
-                                        />
+                                        {currentCharacterID && (
+                                            <RelationsListEditor
+                                                connections={connections}
+                                                onChange={handleRelationChange}
+                                                characterIDs={characterIDs}
+                                                characterId={currentCharacterID}
+                                            />
+                                        )}
 
                                     </Tab>
                                 </Tabs>

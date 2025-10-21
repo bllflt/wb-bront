@@ -33,11 +33,6 @@ const getCharacterConnections = id => {
   return http.get(`/characters/${id}/connections`);
 };
 
-const twist = id => {
-  return http.get(`/characters/${id}/connections2`);
-};
-
-
 const CharacterService = {
   getAll,
   getAllIDs,
