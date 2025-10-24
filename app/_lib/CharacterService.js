@@ -29,8 +29,8 @@ const findByName = name => {
   return http.get(`/characters?name=${name}`);
 };
 
-const getCharacterConnections = id => {
-  return http.get(`/characters/${id}/connections`);
+const getCharacterConnections = (id, degree) => {
+  return http.get(`/characters/${id}/connections${degree ? `?degree=${degree}` : ''}`);
 };
 
 const CharacterService = {

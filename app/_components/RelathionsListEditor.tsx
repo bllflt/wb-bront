@@ -145,12 +145,12 @@ const expandRelations = (connections: any[], currentCharacterId: number) => {
 
     for (const union of connections) {
         // Process Unions (Marriages, etc.)
-        if ([1, 2, 3, 4, 5, 6].includes(union.type)) {
-            unions.push({ value: union.id, label: union.participants.map((p: any) => p.name).join(' & ') });
+        if ([1, 2].includes(union.type)) {
+            unions.push({ value: union.id, label: union.participants.filter((p: any) => p.role == 1).map((p: any) => p.name).join(' & ') });
 
             // Create editable relations for the current character's partners
-            if (union.participants.some((p: any) => p.id === currentCharacterId)) {
-                for (const participant of union.participants) {
+            if (union.participants.filter((p: any) => p.role == 1).some((p: any) => p.id === currentCharacterId)) {
+                for (const participant of union.participants.filter((p: any) => p.role == 1)) {
                     if (participant.id !== currentCharacterId) {
                         relations.push({ type: union.type, source: union.id, target: participant.id });
                     }
@@ -158,14 +158,14 @@ const expandRelations = (connections: any[], currentCharacterId: number) => {
             }
 
             // Create editable relations for children of this union
-            for (const child of union.children) {
+            for (const child of union.participants.filter((p: any) => p.role == 2)) {
                 relations.push({ type: 7, source: union.id, target: child.id });
             }
 
             // Find siblings of the current character
-            const isCurrentCharChild = union.children.some((c: any) => c.id === currentCharacterId);
+            const isCurrentCharChild = union.participants.filter((p: any) => p.role == 2).some((c: any) => c.id === currentCharacterId);
             if (isCurrentCharChild) {
-                for (const sibling of union.children) {
+                for (const sibling of union.participants.filter((p: any) => p.role == 2)) {
                     if (sibling.id !== currentCharacterId && !siblingMap.has(sibling.id)) {
                         siblingMap.set(sibling.id, { name: sibling.name });
                     }
@@ -263,3 +263,4 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, 
 };
 
 export default RelationsListEditor;
+``

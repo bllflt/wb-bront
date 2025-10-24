@@ -48,7 +48,7 @@ const CharacterList = () => {
     }
 
     const handleCharacterChange = (id: string) => {
-        Promise.all([CharacterDataService.get(id), CharacterDataService.getCharacterConnections(id)])
+        Promise.all([CharacterDataService.get(id), CharacterDataService.getCharacterConnections(id, 1)])
             .then(([charResponse, twistResponse]) => {
                 const { id: charId, ...restOfCharData } = charResponse.data;
                 setCurrentCharacterID(charId);

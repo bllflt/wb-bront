@@ -125,27 +125,33 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId }) => {
       for (var i = 0; i < list.length; ++i) {
         rv.push({ 'data': { 'id': 'p' + list[i].id, 'type': list[i].type } });
         for (var j = 0; j < list[i].participants.length; ++j) {
-          if (!seen.has(list[i].participants[j].id)) {
-            rv.push({ 'data': { 'id': list[i].participants[j].id, 'gender': list[i].participants[j].sex, 'label': list[i].participants[j].name } });
-            seen.add(list[i].participants[j].id);
-          }
-          rv.push({ 'data': { 'source': list[i].participants[j].id, 'target': 'p' + list[i].id, 'type': list[i].type } });
-        }
-        if ('children' in (list[i])) {
-          for (var j = 0; j < list[i].children.length; ++j) {
-            if (!seen.has(list[i].children[j].id)) {
-              rv.push({ 'data': { 'id': list[i].children[j].id, 'gender': list[i].children[j].sex, 'label': list[i].children[j].name } });
-              seen.add(list[i].children[j].id);
+          if (list[i].participants[j].role == 1) {
+
+            if (!seen.has(list[i].participants[j].id)) {
+              rv.push({ 'data': { 'id': list[i].participants[j].id, 'gender': list[i].participants[j].sex, 'label': list[i].participants[j].name } });
+              seen.add(list[i].participants[j].id);
             }
-            rv.push({ 'data': { 'source': list[i].children[j].id, 'target': 'p' + list[i].id, 'type': 3 } });
+            rv.push({ 'data': { 'source': list[i].participants[j].id, 'target': 'p' + list[i].id, 'type': list[i].legimate ? 1 : 2 } });
           }
+          if (list[i].participants[j].role == 2) {
+            if (!seen.has(list[i].participants[j].id)) {
+              rv.push({ 'data': { 'id': list[i].participants[j].id, 'gender': list[i].participants[j].sex, 'label': list[i].participants[j].name } });
+              seen.add(list[i].participants[j].id);
+            }
+            rv.push({ 'data': { 'source': list[i].participants[j].id, 'target': 'p' + list[i].id, 'type': 3 } });
+          }
+
+
+
         }
       }
+      console.log(rv);
       return rv;
-    }
+    };
+
 
     const retrieveCharacterConnections = () => {
-      CharacterService.getCharacterConnections(characterId)
+      CharacterService.getCharacterConnections(characterId, 3)
         .then(response => {
           const elements = expander(response.data);
           console.log(elements);
