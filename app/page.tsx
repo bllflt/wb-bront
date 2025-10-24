@@ -10,23 +10,12 @@ import AttributeListEditor from "./_components/AttributeListEditor";
 import RelationsListEditor from "./_components/RelathionsListEditor";
 import FamilyTree from './_components/FamilyTree';
 import CharacterDataService from './_lib/CharacterService';
+import { CharacterData, CharacterDataWithoutID, CharacterRelations, CharacterID } from './types';
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
 
-interface CharacterData {
-    id: number;
-    name: string;
-    appearance: string;
-    sex: number;
-    images: string[];
-    roleplaying: string[];
-    background: string;
-}
-interface CharacterDataWithoutID extends Omit<CharacterData, 'id'> { };
-interface CharacterRelations { type: number; source: number; target: number; }
-
 const CharacterList = () => {
-    const [characterIDs, setCharacterIDs] = useState<CharacterData[]>([]);
+    const [characterIDs, setCharacterIDs] = useState<CharacterID[]>([]);
     const [currentCharacter, setCurrentCharacter] = useState<CharacterDataWithoutID | null>(null);
     const [currentCharacterID, setCurrentCharacterID] = useState<number | null>(null);
     const [connections, setConnections] = useState<any[]>([]);

@@ -5,37 +5,31 @@ import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { useEffect, useState } from "react";
+import { CharacterRelations, CharacterID } from '../types';
 
 const SIBLING_RELATIONSHIP_TYPE = 25;
 const PARENT_RELATIONSIP_TYPE = 7;
 
-
-interface CharacterData {
-    id: number;
-    name: string;
-}
-
 interface CharacterUnions { value: number; label: string; }
-interface CharacterRelations { type: number; source: number; target: number; }
 
 interface RelationsListEditorProps {
     connections: any[];
     onChange: (newRelations: CharacterRelations[]) => void;
     modifiedRelations: CharacterRelations[] | null;
-    characterIDs: CharacterData[];
+    characterIDs: CharacterID[];
     characterId: number;
 }
 
 interface RelationshipEditorProps {
     relation: CharacterRelations;
-    characterIDs: CharacterData[];
+    characterIDs: CharacterID[];
     onRelationChange: (field: string, value: string) => void;
     unions: CharacterUnions[];
     onDelete: () => void;
 }
 
 const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, unions, characterIDs, onRelationChange, onDelete }) => {
-    const { type = "", target = "", source = "" } = relation;
+    const { type = null, target = null, source = null } = relation;
 
 
     const isParental = type == PARENT_RELATIONSIP_TYPE; // "Parents"
@@ -49,7 +43,7 @@ const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, union
                     <div className="flex items-center gap-2">
                         <Form.Select
                             style={{ width: 'auto' }}
-                            value={type}
+                            value={type ?? ''}
                             onChange={(e) => onRelationChange('type', e.target.value)}
                         >
                             <option value="" disabled>Select Relationship</option>
@@ -81,10 +75,10 @@ const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, union
                         </Form.Select>
                         <Form.Select
                             style={{ width: 'auto' }}
-                            value={target}
+                            value={target ?? ''}
                             onChange={(e) => onRelationChange('target', e.target.value)}
                         >
-                            <option value="" disabled hidden> Select a Character</option>
+                            <option value="" disabled hidden>Select a Character</option>
                             {characterIDs.map((e) => {
                                 return <option value={e.id} key={e.id}> {e.name}</option>
                             })}
@@ -95,18 +89,18 @@ const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, union
                     <div className="flex items-center flex-wrap gap-2">
                         <Form.Select
                             style={{ width: 'auto' }}
-                            value={source}
+                            value={source ?? ''}
                             onChange={(e) => onRelationChange('source', e.target.value)}
                         >
                             <option value="" disabled>Select a Parent</option>
                             {unions.map((e) => (
-                                <option value={e.value} key={`partner-${e.value}`}> {e.label}</option>
+                                <option value={e.value} key={`partner-${e.value}`}>{e.label}</option>
                             ))}
                         </Form.Select>
                         <span>are the Parents of</span>
                         <Form.Select
                             style={{ width: 'auto' }}
-                            value={target}
+                            value={target ?? ''}
                             onChange={(e) => onRelationChange('target', e.target.value)}
                         >
                             <option value="" disabled hidden> Select a child</option>
@@ -198,13 +192,16 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, 
         }
     }, [connections, characterId, modifiedRelations]);
     const handleRelationChange = (index: number, field: string, value: string) => {
+        // Parse the string value from the select input into a number or null
+        const numericValue = value === '' ? null : parseInt(value, 10);
+
         const updated = [...internalRelations];
-        const newRelation = { ...updated[index], [field]: value };
+        const newRelation = { ...updated[index], [field]: numericValue };
 
         // If the type is changed to 'Parents', reset the other fields
-        if (field === 'type' && value == PARENT_RELATIONSIP_TYPE) {
-            newRelation.source = "";
-            newRelation.target = "";
+        if (field === 'type' && numericValue === PARENT_RELATIONSIP_TYPE) {
+            newRelation.source = null;
+            newRelation.target = null;
         }
         updated[index] = newRelation;
         onChange(updated);
@@ -218,7 +215,7 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, 
 
     // Add a new relation
     const handleRelationAdd = () => {
-        const newRelations = [...internalRelations, { type: "", source: "", target: "" }];
+        const newRelations = [...internalRelations, { type: null, source: null, target: null }];
         setInternalRelations(newRelations); // Update internal state first
         onChange(newRelations); // Then notify parent
     };
