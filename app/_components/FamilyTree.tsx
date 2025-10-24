@@ -107,6 +107,21 @@ interface FamilyTreeProps {
   characterId: number;
 }
 
+interface Participant {
+  id: number;
+  role: 1 | 2; // 1 for parent, 2 for child
+  sex: number;
+  name: string;
+}
+
+interface Union {
+  id: number;
+  type: number;
+  legitimate: boolean;
+  participants: Participant[];
+}
+
+
 const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId }) => {
   const [elements, setElements] = useState<cytoscape.ElementDefinition[]>([]);
   const [cy, setCy] = useState<cytoscape.Core | null>(null);
@@ -116,45 +131,49 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId }) => {
       return;
     }
 
-    const expander = (list: any) => {
+    const expander = (unions: Union[]): cytoscape.ElementDefinition[] => {
+      const elements: cytoscape.ElementDefinition[] = [];
+      const seenParticipants = new Set<number>();
 
-      const rv = [];
-      const seen = new Set();
+      for (const union of unions) {
+        // Each union from the API represents a family unit.
+        // We create an invisible "union" node in the graph for it.
+        const unionNodeId = `p${union.id}`;
+        elements.push({ data: { id: unionNodeId, type: union.type } });
 
+        const parents = union.participants.filter(p => p.role === 1);
+        const children = union.participants.filter(p => p.role === 2);
 
-      for (var i = 0; i < list.length; ++i) {
-        rv.push({ 'data': { 'id': 'p' + list[i].id, 'type': list[i].type } });
-        for (var j = 0; j < list[i].participants.length; ++j) {
-          if (list[i].participants[j].role == 1) {
-
-            if (!seen.has(list[i].participants[j].id)) {
-              rv.push({ 'data': { 'id': list[i].participants[j].id, 'gender': list[i].participants[j].sex, 'label': list[i].participants[j].name } });
-              seen.add(list[i].participants[j].id);
-            }
-            rv.push({ 'data': { 'source': list[i].participants[j].id, 'target': 'p' + list[i].id, 'type': list[i].legimate ? 1 : 2 } });
+        // Add parent nodes and connect them to the union node.
+        parents.forEach(parent => {
+          if (!seenParticipants.has(parent.id)) {
+            elements.push({ data: { id: parent.id.toString(), gender: parent.sex, label: parent.name } });
+            seenParticipants.add(parent.id);
           }
-          if (list[i].participants[j].role == 2) {
-            if (!seen.has(list[i].participants[j].id)) {
-              rv.push({ 'data': { 'id': list[i].participants[j].id, 'gender': list[i].participants[j].sex, 'label': list[i].participants[j].name } });
-              seen.add(list[i].participants[j].id);
-            }
-            rv.push({ 'data': { 'source': list[i].participants[j].id, 'target': 'p' + list[i].id, 'type': 3 } });
+          // An edge of type 1 is a marriage, type 2 is an affair.
+          const edgeType = union.legitimate ? 1 : 2;
+          elements.push({ data: { source: parent.id, target: unionNodeId, type: edgeType } });
+        });
+
+        // Add child nodes and connect them to the union node.
+        children.forEach(child => {
+          if (!seenParticipants.has(child.id)) {
+            elements.push({ data: { id: child.id.toString(), gender: child.sex, label: child.name } });
+            seenParticipants.add(child.id);
           }
-
-
-
-        }
+          // An edge of type 3 represents a parent-child relationship.
+          elements.push({ data: { source: child.id, target: unionNodeId, type: 3 } });
+        });
       }
-      console.log(rv);
-      return rv;
+
+      return elements;
     };
 
 
     const retrieveCharacterConnections = () => {
       CharacterService.getCharacterConnections(characterId, 3)
         .then(response => {
-          const elements = expander(response.data);
-          console.log(elements);
+          const elements = expander(response.data as Union[]);
           const compoundNodes: cytoscape.ElementDefinition[] = [];
 
           const processedElements = elements.map((el: any) => {

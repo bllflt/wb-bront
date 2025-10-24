@@ -29,13 +29,12 @@ interface RelationsListEditorProps {
 interface RelationshipEditorProps {
     relation: CharacterRelations;
     characterIDs: CharacterData[];
-    characterId: number;
     onRelationChange: (field: string, value: string) => void;
     unions: CharacterUnions[];
     onDelete: () => void;
 }
 
-const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, unions, characterIDs, characterId, onRelationChange, onDelete }) => {
+const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, unions, characterIDs, onRelationChange, onDelete }) => {
     const { type = "", target = "", source = "" } = relation;
 
 
@@ -110,7 +109,7 @@ const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, union
                             value={target}
                             onChange={(e) => onRelationChange('target', e.target.value)}
                         >
-                            <option value="none" disabled hidden> Select a Parent</option>
+                            <option value="" disabled hidden> Select a child</option>
                             {characterIDs.map((e) => (
                                 <option value={e.id} key={`target-${e.id}`}> {e.name}</option>
                             ))}
@@ -236,7 +235,6 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, 
                             unions={internalUnions}
                             relation={relation}
                             characterIDs={characterIDs}
-                            characterId={characterId}
                             onDelete={() => handleRelationDelete(index)}
                             onRelationChange={(field, value) => handleRelationChange(index, field, value)}
                         />
