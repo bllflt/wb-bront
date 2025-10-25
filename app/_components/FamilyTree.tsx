@@ -209,7 +209,7 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => 
                 if (sourceNode) sourceNode.data.parent = parentId;
                 if (targetNode) targetNode.data.parent = parentId;
                 if (!compoundNodes.some(n => n.data.id === parentId)) {
-                  compoundNodes.push({ data: { id: parentId } });
+                  compoundNodes.push({ data: { id: parentId, type: 'marriage_unit' } });
                 }
               }
             }
