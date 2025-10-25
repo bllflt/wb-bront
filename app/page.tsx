@@ -2,6 +2,7 @@
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import React, { ChangeEvent, useEffect, useState } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
@@ -16,6 +17,10 @@ import Tabs from 'react-bootstrap/Tabs';
 import Form from "react-bootstrap/Form";
 
 const CharacterList = () => {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
     const [characterIDs, setCharacterIDs] = useState<CharacterID[]>([]);
     const [currentCharacter, setCurrentCharacter] = useState<CharacterDataWithoutID | null>(null);
     const [currentCharacterID, setCurrentCharacterID] = useState<number | null>(null);
@@ -26,7 +31,14 @@ const CharacterList = () => {
 
     useEffect(() => {
         retrieveCharacterIDs();
-    }, []);
+
+        const charIdFromUrl = searchParams.get('characterId');
+        if (charIdFromUrl) {
+            if (Number(charIdFromUrl) !== currentCharacterID) {
+                fetchCharacterData(charIdFromUrl);
+            }
+        }
+    }, [searchParams]);
 
     const retrieveCharacterIDs = () => {
         CharacterDataService.getAllIDs()
@@ -55,7 +67,12 @@ const CharacterList = () => {
             });
     };
 
-    const handleCharacterChange = (id: string) => {
+    const handleCharacterChange = (id: string | null) => {
+        const newUrl = id ? `${pathname}?characterId=${id}` : pathname;
+        router.push(newUrl);
+    };
+
+    const fetchCharacterData = (id: string) => {
         Promise.all([CharacterDataService.get(id), CharacterDataService.getCharacterConnections(id, 1)])
             .then(([charResponse, twistResponse]) => {
                 const { id: charId, ...restOfCharData } = charResponse.data;
@@ -88,9 +105,7 @@ const CharacterList = () => {
 
     const updateCharacter = () => {
         CharacterDataService.update(currentCharacterID, currentCharacter)
-            .then(response => {
-                // Success is silent, only show errors.
-            })
+            .then(response => { })
             .catch(e => {
                 console.error(e);
                 setError("Failed to update character.");
