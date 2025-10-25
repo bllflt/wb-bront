@@ -9,8 +9,8 @@ import Row from "react-bootstrap/Row";
 import AttributeListEditor from "./_components/AttributeListEditor";
 import RelationsListEditor from "./_components/RelathionsListEditor";
 import FamilyTree from './_components/FamilyTree';
-import CharacterDataService from './_lib/CharacterService';
-import { CharacterData, CharacterDataWithoutID, CharacterRelations, CharacterID } from './types';
+import CharacterDataService from './services/CharacterService';
+import { CharacterDataWithoutID, CharacterRelations, CharacterID } from './types';
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
 
@@ -35,6 +35,19 @@ const CharacterList = () => {
                 console.log(e);
             });
     }
+
+    const refreshCharacterData = () => {
+        if (!currentCharacterID) return;
+
+        CharacterDataService.getCharacterConnections(currentCharacterID, 1)
+            .then(twistResponse => {
+                setConnections(twistResponse.data || []);
+                setModifiedRelations(null); // Reset modified relations to reflect new server state
+            })
+            .catch(e => {
+                console.log(e);
+            });
+    };
 
     const handleCharacterChange = (id: string) => {
         Promise.all([CharacterDataService.get(id), CharacterDataService.getCharacterConnections(id, 1)])
@@ -231,6 +244,7 @@ const CharacterList = () => {
                                                 modifiedRelations={modifiedRelations}
                                                 characterIDs={characterIDs}
                                                 characterId={currentCharacterID}
+                                                onDataChange={refreshCharacterData}
                                             />
                                         )}
 

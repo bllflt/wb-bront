@@ -4,7 +4,7 @@ import cytoscape from 'cytoscape';
 import dagre from 'cytoscape-dagre';
 import React, { useEffect, useState } from 'react';
 import CytoscapeComponent from 'react-cytoscapejs';
-import CharacterService from '../_lib/CharacterService';
+import CharacterService from '../services/CharacterService';
 
 // Register the Dagre layout extension
 cytoscape.use(dagre);
