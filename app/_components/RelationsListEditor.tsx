@@ -10,7 +10,7 @@ import { CharacterRelations, CharacterID } from '../types';
 
 import PartnershipService from "../services/partnershipService.js";
 const SIBLING_RELATIONSHIP_TYPE = 25;
-const PARENT_RELATIONSIP_TYPE = 7;
+const PARENT_RELATIONSHIP_TYPE = 7;
 const CHILD_RELATIONSHIP_TYPE = 8;
 
 
@@ -39,7 +39,7 @@ const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, union
     const { type = null, target = null, source = null } = relation;
 
 
-    const isParental = type == PARENT_RELATIONSIP_TYPE; // "Parents"
+    const isParental = type == PARENT_RELATIONSHIP_TYPE; // "Parents"
     const isSibling = type == SIBLING_RELATIONSHIP_TYPE; // "Sibling"
     const isChild = type == CHILD_RELATIONSHIP_TYPE; // "Child"
 
@@ -250,7 +250,7 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, 
         const newRelation: CharacterRelations = { ...updated[index], [field]: numericValue };
 
         // If the type is changed to 'Parents', reset the other fields
-        if (field === 'type' && numericValue === PARENT_RELATIONSIP_TYPE) {
+        if (field === 'type' && numericValue === PARENT_RELATIONSHIP_TYPE) {
             newRelation.source = null;
             newRelation.target = null;
         }

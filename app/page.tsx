@@ -9,7 +9,7 @@ import Row from "react-bootstrap/Row";
 import ErrorModal from './_components/ErrorModal';
 import AttributeListEditor from "./_components/AttributeListEditor";
 import FamilyTree from './_components/FamilyTree';
-import RelationsListEditor from "./_components/RelathionsListEditor";
+import RelationsListEditor from "./_components/RelationsListEditor";
 import CharacterDataService from './services/CharacterService';
 import { CharacterDataWithoutID, CharacterRelations, CharacterID } from './types';
 import Tab from 'react-bootstrap/Tab';
