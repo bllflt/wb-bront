@@ -2,8 +2,9 @@
 
 import React from "react";
 import Form from "react-bootstrap/Form";
-import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
+import Row from "react-bootstrap/Row";
+import ErrorModal from './ErrorModal';
 import { useEffect, useState } from "react";
 import { CharacterRelations, CharacterID } from '../types';
 
@@ -212,6 +213,8 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, 
     // Handle change of a single relation
     const [internalRelations, setInternalRelations] = useState<CharacterRelations[]>([]);
     const [internalUnions, setInternalUnions] = useState<CharacterUnions[]>([]);
+    const [error, setError] = useState<string | null>(null);
+    const [showErrorModal, setShowErrorModal] = useState(false);
 
     useEffect(() => {
         if (modifiedRelations) {
@@ -269,6 +272,8 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, 
                 })
                 .catch(e => {
                     console.error("Failed to update partnership", e);
+                    setError("Failed to update partnership.");
+                    setShowErrorModal(true);
                 });
 
         } else if ([1, 2, 5].includes(newRelation.type as number) && newRelation.source === null && newRelation.target !== null) {
@@ -295,6 +300,8 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, 
                 })
                 .catch(e => {
                     console.error("Failed to create partnership", e);
+                    setError("Failed to create partnership.");
+                    setShowErrorModal(true);
                 });
         } else if (newRelation.type === 7 && newRelation.source !== null && newRelation.target !== null) {
             // --- API call for adding the character as a child to a partnershiop
@@ -304,6 +311,8 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, 
                 })
                 .catch(e => {
                     console.error("Failed to add partner to partnership", e);
+                    setError("Failed to add partner to partnership.");
+                    setShowErrorModal(true);
                 });
         }
     };
@@ -318,6 +327,8 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, 
                 })
                 .catch(e => {
                     console.error("Failed to delete relationship from API", e);
+                    setError("Failed to delete relationship from API.");
+                    setShowErrorModal(true);
                 });
         } else {
             const updated = internalRelations.filter((_, i) => i !== index);
@@ -334,6 +345,11 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ connections, 
 
     return (
         <div className="space-y-2">
+            <ErrorModal
+                show={showErrorModal}
+                onHide={() => setShowErrorModal(false)}
+                error={error}
+            />
             {internalRelations && internalRelations.length > 0 && (
                 internalRelations.map((relation, index) => (
                     <div key={index} className="flex items-center space-x-2">

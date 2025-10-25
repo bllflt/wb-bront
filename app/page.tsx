@@ -1,18 +1,19 @@
 'use client';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
-import React, { useEffect, useState } from "react";
+import React, { ChangeEvent, useEffect, useState } from 'react';
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
-import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
+import ErrorModal from './_components/ErrorModal';
 import AttributeListEditor from "./_components/AttributeListEditor";
-import RelationsListEditor from "./_components/RelathionsListEditor";
 import FamilyTree from './_components/FamilyTree';
+import RelationsListEditor from "./_components/RelathionsListEditor";
 import CharacterDataService from './services/CharacterService';
 import { CharacterDataWithoutID, CharacterRelations, CharacterID } from './types';
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
+import Form from "react-bootstrap/Form";
 
 const CharacterList = () => {
     const [characterIDs, setCharacterIDs] = useState<CharacterID[]>([]);
@@ -20,7 +21,8 @@ const CharacterList = () => {
     const [currentCharacterID, setCurrentCharacterID] = useState<number | null>(null);
     const [connections, setConnections] = useState<any[]>([]);
     const [modifiedRelations, setModifiedRelations] = useState<CharacterRelations[] | null>(null);
-    const [message, setMessage] = useState("");
+    const [error, setError] = useState<string | null>(null);
+    const [showErrorModal, setShowErrorModal] = useState(false);
 
     useEffect(() => {
         retrieveCharacterIDs();
@@ -32,7 +34,9 @@ const CharacterList = () => {
                 setCharacterIDs(response.data);
             })
             .catch(e => {
-                console.log(e);
+                console.error(e);
+                setError("BIG WARNING: Could not connect to the backend. Is the dev server running?");
+                setShowErrorModal(true);
             });
     }
 
@@ -45,7 +49,9 @@ const CharacterList = () => {
                 setModifiedRelations(null); // Reset modified relations to reflect new server state
             })
             .catch(e => {
-                console.log(e);
+                console.error(e);
+                setError("Failed to refresh character connections.");
+                setShowErrorModal(true);
             });
     };
 
@@ -59,13 +65,13 @@ const CharacterList = () => {
                 setModifiedRelations(null); // Reset modified relations on character change
             })
             .catch(e => {
-                console.log(e);
-                // It's good practice to handle potential UI state in case of an error
-                setMessage("Failed to load character data.");
+                console.error(e);
+                setError("Failed to load character data.");
+                setShowErrorModal(true);
             });
     }
 
-    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+    const handleInputChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
         const { name, value } = event.target;
         setCurrentCharacter({ ...currentCharacter, [name]: value } as CharacterDataWithoutID);
     };
@@ -83,10 +89,12 @@ const CharacterList = () => {
     const updateCharacter = () => {
         CharacterDataService.update(currentCharacterID, currentCharacter)
             .then(response => {
-                setMessage("The character was updated successfully!");
+                // Success is silent, only show errors.
             })
             .catch(e => {
-                console.log(e);
+                console.error(e);
+                setError("Failed to update character.");
+                setShowErrorModal(true);
             });
     };
 
@@ -99,7 +107,9 @@ const CharacterList = () => {
                 setCurrentCharacter(restOfResponseData);
             })
             .catch(e => {
-                console.log(e);
+                console.error(e);
+                setError("Failed to create character.");
+                setShowErrorModal(true);
             });
     };
 
@@ -111,13 +121,20 @@ const CharacterList = () => {
                 setCurrentCharacter(null);
             })
             .catch(e => {
-                console.log(e);
+                console.error(e);
+                setError("Failed to delete character.");
+                setShowErrorModal(true);
             });
     };
 
 
     return (
         <div>
+            <ErrorModal
+                show={showErrorModal}
+                onHide={() => setShowErrorModal(false)}
+                error={error}
+            />
             <Form>
                 <Row>
                     <Col>
@@ -266,7 +283,6 @@ const CharacterList = () => {
                                     onClick={deleteCharacter}>
                                     Delete
                                 </Button>
-                                <p>{message}</p>
                             </Form>
 
                         </div>
