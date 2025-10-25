@@ -197,7 +197,10 @@ const CharacterList = () => {
                                 />
                             ))}
                             {currentCharacterID && (
-                                <FamilyTree characterId={currentCharacterID} />
+                                <FamilyTree
+                                    characterId={currentCharacterID}
+                                    onNodeClick={handleCharacterChange}
+                                />
                             )}
                         </div>
                         {/* Text fields column */}

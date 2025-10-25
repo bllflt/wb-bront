@@ -121,8 +121,13 @@ interface Union {
   participants: Participant[];
 }
 
+interface FamilyTreeProps {
+  characterId: number;
+  onNodeClick: (id: string) => void;
+}
 
-const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId }) => {
+
+const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => {
   const [elements, setElements] = useState<cytoscape.ElementDefinition[]>([]);
   const [cy, setCy] = useState<cytoscape.Core | null>(null);
 
@@ -225,6 +230,12 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId }) => {
       // Once the layout is done, fit the viewport to the graph
       cy.ready(() => {
         cy.fit(undefined, 30); // 30px padding
+      });
+      cy.on('tap', 'node', (event) => {
+        const nodeId = event.target.id();
+        if (nodeId) {
+          onNodeClick(nodeId);
+        }
       });
     }
   }, [cy, elements]); // Rerun when cy or elements change
