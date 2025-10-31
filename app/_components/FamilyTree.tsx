@@ -1,107 +1,120 @@
 'use client';
 
 import cytoscape from 'cytoscape';
-import dagre from 'cytoscape-dagre';
+import klay from 'cytoscape-klay';
 import React, { useEffect, useState } from 'react';
 import CytoscapeComponent from 'react-cytoscapejs';
 import CharacterService from '../services/CharacterService';
 
-// Register the Dagre layout extension
-cytoscape.use(dagre);
+cytoscape.use(klay);
 
-// 1. Define the data structure for the elements
+interface CytoscapeNode {
+  data: {
+    id: string;
+    label: string;
+    type?: string;
+    parent?: string;
+  };
+}
 
-// 2. Define the Cytoscape Stylesheet for conventions
-const styleSheet: cytoscape.Stylesheet[] = [
-  // --- Node Styles (People) ---
-  {
-    selector: 'node[gender = "male"]',
-    style: {
-      'background-color': '#1E90FF', // Dodger Blue
-      'shape': 'square',
-      'label': 'data(label)',
-      'text-valign': 'center',
-      'color': 'white',
-      'width': 80,
-      'height': 40,
-      'font-size': 10,
-    },
-  },
-  {
-    selector: 'node[gender = "female"]',
-    style: {
-      'background-color': '#FF69B4', // Hot Pink
-      'shape': 'circle',
-      'label': 'data(label)',
-      'text-valign': 'center',
-      'color': 'white',
-      'width': 60,
-      'height': 60,
-      'font-size': 10,
-    },
-  },
+interface CytoscapeEdge {
+  data: {
+    id: string;
+    source: string;
+    target: string;
+    label?: string;
+  };
+}
 
-  // --- Invisible Marriage Unit Node ---
-  {
-    selector: 'node[type = "marriage_unit"]',
-    style: {
-      'background-color': '#fff', // Transparent background
-      'border-width': 0,
-      'width': 1,
-      'height': 1,
-      'label': '',
-      'opacity': 0, // Make the node invisible
-    },
-  },
-
-  // --- Edge Styles (Relationships) ---
-  // Spouse/Marriage Line (Horizontal)
-  {
-    selector: 'edge[type = "spouse"]',
-    style: {
-      'curve-style': 'bezier', // Dagre layout uses straight lines for edges
-      'line-color': '#ccc', // Gray
-      'target-arrow-shape': 'none',
-      'width': 2,
-    },
-  },
-  {
-    selector: 'edge[type = "affair"]',
-    style: {
-      'curve-style': 'bezier', // Dagre layout uses straight lines for edges
-      'line-color': '#ccc', // Gray
-      'target-arrow-shape': 'none',
-      'width': 2,
-      'line-style': 'dashed',
-    },
-  },
-  // Parent-Child Line (Vertical)
-  {
-    selector: 'edge[type = "parent_child"]',
-    style: {
-      'curve-style': 'taxi', // Forces a straight connection, often vertical in Dagre
-      'taxi-direction': 'downward',
-      'line-color': '#000', // Black
-      'target-arrow-shape': 'none',
-      'width': 2,
-    },
-  },
-];
-
-// 3. Define the Dagre Layout
-// Dagre is a directed graph layout, excellent for hierarchical data (top-down flow).
-// We use the 'parent_child' edges to define the hierarchy (downward flow).
 const layoutOptions = {
-  name: 'dagre',
-  rankDir: 'TB',
-  rankSep: 120, // Increase vertical separation between generations
-  nodeSep: 50,  // Horizontal separation between nodes in the same rank
-  padding: 40,
-  align: 'UL',  // Align nodes in the same rank to the upper-left
-  // align: 'UL', // Removing align often gives a more centered look
-  // Other Dagre options can be tweaked for better results
-  // e.g., 'align', 'nodeSep', 'edgeSep'
+  name: 'klay',
+  klay: {
+    direction: "DOWN",
+    edgeRouting: "POLYLINE",
+    layoutHierarchy: true,
+    borderSpacing: 40,
+    spacing: 70,
+    inLayerSpacingFactor: 1.3,
+    nodePlacement: 'BRANDES_KOEPF',
+    separateConnectedComponents: false 
+  }
 };
+
+
+const styleSheet = [{
+  selector: 'node[gender = "male"]',
+  style: {
+    'label': 'data(label)',
+    'text-valign': 'center',
+    'font-size': 10,
+    'color': 'white',
+    'width': 80,
+    'height': 40,
+    'background-color': '#1E90FF', // Dodger Blue
+    'border-width': 1,
+    'shape': 'rectangle'
+  }
+}, {
+  selector: 'node[gender = "female"]',
+  style: {
+    'label': 'data(label)',
+    'text-valign': 'center',
+    'font-size': 10,
+    'color': 'white',
+    'width': 60,
+    'height': 60,
+    'background-color': '#FF69B4', // Hot Pink
+    'shape': 'ellipse',
+    'border-width': 1
+  },
+},
+
+// --- Invisible Marriage Unit Node ---
+{
+  selector: 'node[type = "marriage_unit"]',
+  style: {
+    'background-opacity': 0,
+    'border-opacity': 0,
+    shape: 'rectangle',
+    padding: '20',
+    width: 'label',
+    height: 'label'
+  },
+},
+
+// --- Edge Styles (Relationships) ---
+// Spouse/Marriage Line (Horizontal)
+{
+  selector: 'edge[type = "spouse"]',
+  style: {
+    'curve-style': 'straight',
+    'line-color': '#ccc', // Gray
+    'target-arrow-shape': 'none',
+    'width': 2,
+  },
+},
+{
+  selector: 'edge[type = "affair"]',
+  style: {
+    'curve-style': 'straight',
+    'line-color': '#ccc', // Gray
+    'target-arrow-shape': 'none',
+    'width': 2,
+    'line-style': 'dashed',
+  },
+},
+// Parent-Child Line (Vertical)
+{
+  selector: 'edge[type = "parent_child"]',
+  style: {
+    'curve-style': 'taxi',
+    'taxi-direction': 'downward',
+    'line-color': '#000', // Black
+    'target-arrow-shape': 'none',
+    'width': 2,
+  },
+}]
+
 
 interface FamilyTreeProps {
   characterId: number;
@@ -144,7 +157,8 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => 
         // Each union from the API represents a family unit.
         // We create an invisible "union" node in the graph for it.
         const unionNodeId = `p${union.id}`;
-        elements.push({ data: { id: unionNodeId, type: union.type } });
+        const unionType = union.type === 1 ? 'marriage_unit' : 'lumberjack';
+        elements.push({ data: { id: unionNodeId, type: unionType } });
 
         const parents = union.participants.filter(p => p.role === 1);
         const children = union.participants.filter(p => p.role === 2);
@@ -152,25 +166,30 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => 
         // Add parent nodes and connect them to the union node.
         parents.forEach(parent => {
           if (!seenParticipants.has(parent.id)) {
-            elements.push({ data: { id: parent.id.toString(), gender: parent.sex, label: parent.name } });
+            const gender = parent.sex === 1 ? 'male' : 'female';
+            elements.push({
+              data: { id: parent.id.toString(), gender: gender, label: parent.name, parent: unionNodeId }
+            });
             seenParticipants.add(parent.id);
           }
-          // An edge of type 1 is a marriage, type 2 is an affair.
-          const edgeType = union.legitimate ? 1 : 2;
-          elements.push({ data: { source: parent.id, target: unionNodeId, type: edgeType } });
         });
+        const [first, ...rest] = parents
+        rest.forEach(parent => {
+          const edgeType = union.legitimate ? 'spouse' : 'affair';
+          elements.push({ data: { source: first.id.toString(), target: parent.id.toString(), type: edgeType } });
+        })
 
-        // Add child nodes and connect them to the union node.
+
+        // Add child nodes and connect them to the union node. 
         children.forEach(child => {
           if (!seenParticipants.has(child.id)) {
-            elements.push({ data: { id: child.id.toString(), gender: child.sex, label: child.name } });
+            const gender = child.sex === 1 ? 'male' : 'female';
+            elements.push({ data: { id: child.id.toString(), gender: gender, label: child.name } });
             seenParticipants.add(child.id);
           }
-          // An edge of type 3 represents a parent-child relationship.
-          elements.push({ data: { source: child.id, target: unionNodeId, type: 3 } });
+          elements.push({ data: { source: unionNodeId, target: child.id.toString(), type: 'parent_child' } });
         });
       }
-
       return elements;
     };
 
@@ -179,43 +198,7 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => 
       CharacterService.getCharacterConnections(characterId, 3)
         .then(response => {
           const elements = expander(response.data as Union[]);
-          const compoundNodes: cytoscape.ElementDefinition[] = [];
-
-          const processedElements = elements.map((el: any) => {
-            const newEl = { data: { ...el.data } }; // Create a mutable copy
-
-            // Process Genders and Node Types
-            if (!newEl.data.source) {
-              if (newEl.data.hasOwnProperty('gender')) {
-                if (newEl.data.gender === 1) newEl.data.gender = 'male';
-                if (newEl.data.gender === 2) newEl.data.gender = 'female';
-              }
-              if (newEl.data.type === 1 || newEl.data.type === 2) {
-                newEl.data.type = 'marriage_unit';
-              }
-            }
-
-            // Process Edge Types and create compound nodes
-            if (newEl.data.source) {
-              if (newEl.data.type === 1) newEl.data.type = 'spouse';
-              if (newEl.data.type === 2) newEl.data.type = 'affair';
-              if (newEl.data.type === 3) newEl.data.type = 'parent_child';
-
-              // Group spouses and marriage units into a compound parent
-              if (newEl.data.type === 'spouse' || newEl.data.type === 'affair') {
-                const parentId = `family-${newEl.data.target}`;
-                const sourceNode = elements.find((e: any) => e.data.id === newEl.data.source);
-                const targetNode = elements.find((e: any) => e.data.id === newEl.data.target);
-                if (sourceNode) sourceNode.data.parent = parentId;
-                if (targetNode) targetNode.data.parent = parentId;
-                if (!compoundNodes.some(n => n.data.id === parentId)) {
-                  compoundNodes.push({ data: { id: parentId, type: 'marriage_unit' } });
-                }
-              }
-            }
-            return newEl;
-          });
-          setElements([...compoundNodes, ...processedElements]);
+          setElements(elements);
         })
         .catch(e => {
           console.log(e);
@@ -227,22 +210,32 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => 
 
   useEffect(() => {
     if (cy && elements.length > 0) {
-      // Once the layout is done, fit the viewport to the graph
+      cy.layout(layoutOptions).run();
+
       cy.ready(() => {
-        cy.fit(undefined, 30); // 30px padding
+        const targetNode = cy.getElementById(characterId.toString());
+        if (targetNode.length > 0) {
+          console.log(targetNode);
+          cy.center(targetNode);
+          cy.zoom(0.5);
+        } else {
+          cy.fit(undefined, 30); // Fallback if the node isn't found
+        }
       });
+
       cy.on('tap', 'node', (event) => {
         const nodeId = event.target.id();
-        if (nodeId) {
+        // Filter out taps on the invisible union nodes
+        if (nodeId && !nodeId.startsWith('p')) {
           onNodeClick(nodeId);
         }
       });
     }
-  }, [cy, elements]); // Rerun when cy or elements change
+  }, [cy, elements, onNodeClick, characterId]); // Rerun when cy, elements, or characterId change
 
   const containerStyle: React.CSSProperties = {
     width: '100%',
-    height: '800px',
+    height: '100%',
     border: '1px solid #ccc',
   };
 
@@ -251,7 +244,6 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => 
       <CytoscapeComponent
         elements={elements}
         stylesheet={styleSheet}
-        layout={layoutOptions}
         cy={setCy}
         style={{ width: '100%', height: '100%' }}
       />
