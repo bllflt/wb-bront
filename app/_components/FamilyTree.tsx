@@ -1,55 +1,46 @@
 'use client';
 
 import cytoscape from 'cytoscape';
-import klay from 'cytoscape-klay';
 import React, { useEffect, useState } from 'react';
 import CytoscapeComponent from 'react-cytoscapejs';
 import CharacterService from '../services/CharacterService';
+import cytoscapeFcose from 'cytoscape-fcose';
 
-cytoscape.use(klay);
+cytoscape.use(cytoscapeFcose);
 
-interface CytoscapeNode {
-  data: {
-    id: string;
-    label: string;
-    type?: string;
-    parent?: string;
-  };
-}
-
-interface CytoscapeEdge {
-  data: {
-    id: string;
-    source: string;
-    target: string;
-    label?: string;
-  };
-}
-
-const layoutOptions = {
-  name: 'klay',
-  klay: {
-    direction: "DOWN",
-    edgeRouting: "POLYLINE",
-    layoutHierarchy: true,
-    borderSpacing: 40,
-    spacing: 70,
-    inLayerSpacingFactor: 1.3,
-    nodePlacement: 'BRANDES_KOEPF',
-    separateConnectedComponents: false 
-  }
+const layoutOptions: cytoscapeFcose.FcoseLayoutOptions = {
+  name: 'fcose',
+  // Function for ideal edge length
+  idealEdgeLength: edge => {
+    switch (edge.data('relationship')) {
+      case 'spouse': return 30;
+      case 'parent': return 120;
+      default: return 80;
+    }
+  },
+  // Function for edge elasticity (spring stiffness)
+  edgeElasticity: edge => {
+    return edge.data('relationship') === 'spouse' ? 0.05 : 0.5;
+  },
+  // Function for node repulsion (avoid overlapping generations)
+  nodeRepulsion: node => {
+    return node.data('type') === 'person' ? 4000 : 10000;
+  },
+  nodeSeparation: 100,
+  gravity: 0.25,
+  animate: true
 };
 
-
-const styleSheet = [{
+const styleSheet: cytoscape.StylesheetJsonBlock[] = [{
   selector: 'node[gender = "male"]',
   style: {
     'label': 'data(label)',
     'text-valign': 'center',
     'font-size': 10,
     'color': 'white',
-    'width': 80,
-    'height': 40,
+    'width': 'label',
+    'height': 'label',
+    'padding': '6px',
     'background-color': '#1E90FF', // Dodger Blue
     'border-width': 1,
     'shape': 'rectangle'
@@ -61,8 +52,9 @@ const styleSheet = [{
     'text-valign': 'center',
     'font-size': 10,
     'color': 'white',
-    'width': 60,
-    'height': 60,
+    'width': 'label',
+    'height': 'label',
+    'padding': '6px',
     'background-color': '#FF69B4', // Hot Pink
     'shape': 'ellipse',
     'border-width': 1
@@ -73,12 +65,12 @@ const styleSheet = [{
 {
   selector: 'node[type = "marriage_unit"]',
   style: {
-    'background-opacity': 0,
-    'border-opacity': 0,
-    shape: 'rectangle',
-    padding: '20',
-    width: 'label',
-    height: 'label'
+    'background-color': '#fff', // Transparent background
+    'border-width': 0,
+    'width': 1,
+    'height': 1,
+    'label': '',
+    'opacity': 0, // Make the node invisible
   },
 },
 
@@ -168,17 +160,13 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => 
           if (!seenParticipants.has(parent.id)) {
             const gender = parent.sex === 1 ? 'male' : 'female';
             elements.push({
-              data: { id: parent.id.toString(), gender: gender, label: parent.name, parent: unionNodeId }
+              data: { id: parent.id.toString(), gender: gender, label: parent.name }
             });
             seenParticipants.add(parent.id);
           }
-        });
-        const [first, ...rest] = parents
-        rest.forEach(parent => {
           const edgeType = union.legitimate ? 'spouse' : 'affair';
-          elements.push({ data: { source: first.id.toString(), target: parent.id.toString(), type: edgeType } });
-        })
-
+          elements.push({ data: { source: parent.id.toString(), target: unionNodeId, type: edgeType, directed: false } });
+        });
 
         // Add child nodes and connect them to the union node. 
         children.forEach(child => {
@@ -190,6 +178,7 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => 
           elements.push({ data: { source: unionNodeId, target: child.id.toString(), type: 'parent_child' } });
         });
       }
+      console.log(elements)
       return elements;
     };
 
@@ -213,10 +202,20 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => 
       cy.layout(layoutOptions).run();
 
       cy.ready(() => {
+        cy.nodes().forEach(n => {
+          const parents = n.incomers('edge[relationship="parent_child"]').sources();
+          if (parents.nonempty()) {
+            const avgY = parents.map(p => p.position('y')).reduce((a, b) => a + b, 0) / parents.length;
+            if (n.position('y') < avgY + 100)
+              n.position('y', avgY + 100);
+          }
+        });
+
         const targetNode = cy.getElementById(characterId.toString());
         if (targetNode.length > 0) {
-          console.log(targetNode);
           cy.center(targetNode);
+          cy.maxZoom(1.0);
+          cy.minZoom(0.3);
           cy.zoom(0.5);
         } else {
           cy.fit(undefined, 30); // Fallback if the node isn't found

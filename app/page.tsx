@@ -186,22 +186,28 @@ const CharacterList = () => {
             <div>
                 {currentCharacter ? (
                     <div className="flex flex-row gap-6">
-                        {/* Images column */}
-                        <div className="w-1/3 max-h-[400px] overflow-y-auto rounded p-2  flex flex-col items-center">
-                            {currentCharacter.images && currentCharacter.images.map((img, idx) => (
-                                <img
-                                    key={idx}
-                                    src={"http://127.0.0.1:5000/images/".concat(img)}
-                                    alt={`${currentCharacter.name} image ${idx + 1}`}
-                                    className="mb-2 max-w-full max-h-40 object-contain"
-                                />
-                            ))}
-                            {currentCharacterID && (
-                                <FamilyTree
-                                    characterId={currentCharacterID}
-                                    onNodeClick={handleCharacterChange}
-                                />
-                            )}
+                        {/* Left column */}
+                        <div className="w-1/3 flex flex-col gap-4">
+                            {/* Images section */}
+                            <div className="max-h-[400px] overflow-y-auto rounded p-2 flex flex-col items-center">
+                                {currentCharacter.images && currentCharacter.images.map((img, idx) => (
+                                    <img
+                                        key={idx}
+                                        src={"http://127.0.0.1:5000/images/".concat(img)}
+                                        alt={`${currentCharacter.name} image ${idx + 1}`}
+                                        className="mb-2 max-w-full max-h-40 object-contain"
+                                    />
+                                ))}
+                            </div>
+                            {/* Family Tree section */}
+                            <div className="h-[400px]">
+                                {currentCharacterID && (
+                                    <FamilyTree
+                                        characterId={currentCharacterID}
+                                        onNodeClick={handleCharacterChange}
+                                    />
+                                )}
+                            </div>
                         </div>
                         {/* Text fields column */}
                         <div className="w-2/3 flex flex-col gap-4">
