@@ -7,6 +7,7 @@ import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import ErrorModal from './_components/ErrorModal';
+import ImageGrid from './_components/ImageGrid';
 import AttributeListEditor from "./_components/AttributeListEditor";
 import FamilyTree from './_components/FamilyTree';
 import RelationsListEditor from "./_components/RelationsListEditor";
@@ -55,8 +56,9 @@ const CharacterList = () => {
     const refreshCharacterData = () => {
         if (!currentCharacterID) return;
 
-        CharacterDataService.getCharacterConnections(currentCharacterID, 1)
+        CharacterDataService.getCharacterConnections(currentCharacterID, 0)
             .then(twistResponse => {
+                console.log(twistResponse.data);
                 setConnections(twistResponse.data || []);
                 setModifiedRelations(null); // Reset modified relations to reflect new server state
             })
@@ -73,7 +75,7 @@ const CharacterList = () => {
     };
 
     const fetchCharacterData = (id: string) => {
-        Promise.all([CharacterDataService.get(id), CharacterDataService.getCharacterConnections(id, 1)])
+        Promise.all([CharacterDataService.get(id), CharacterDataService.getCharacterConnections(id, 0)])
             .then(([charResponse, twistResponse]) => {
                 const { id: charId, ...restOfCharData } = charResponse.data;
                 setCurrentCharacterID(charId);
@@ -142,7 +144,6 @@ const CharacterList = () => {
             });
     };
 
-
     return (
         <div>
             <ErrorModal
@@ -152,10 +153,11 @@ const CharacterList = () => {
             />
             <Form>
                 <Row>
-                    <Col>
+                    <Col xs="auto">
                         <Form.Select
                             data-width="auto"
                             value={currentCharacterID || "none"}
+                            style={{ width: 'fit-content' }}
                             onChange={e => handleCharacterChange(e.target.value)}
                         >
                             <option value="none" disabled hidden> Select a Character</option>
@@ -190,14 +192,11 @@ const CharacterList = () => {
                         <div className="w-1/3 flex flex-col gap-4">
                             {/* Images section */}
                             <div className="max-h-[400px] overflow-y-auto rounded p-2 flex flex-col items-center">
-                                {currentCharacter.images && currentCharacter.images.map((img, idx) => (
-                                    <img
-                                        key={idx}
-                                        src={"http://127.0.0.1:5000/images/".concat(img)}
-                                        alt={`${currentCharacter.name} image ${idx + 1}`}
-                                        className="mb-2 max-w-full max-h-40 object-contain"
+                                {currentCharacter.images && (
+                                    <ImageGrid
+                                        images={currentCharacter.images}
                                     />
-                                ))}
+                                )}
                             </div>
                             {/* Family Tree section */}
                             <div className="h-[400px]">
@@ -232,6 +231,7 @@ const CharacterList = () => {
                                                 as="select"
                                                 name="sex"
                                                 value={currentCharacter.sex}
+                                                style={{ width: 'fit-content' }}
                                                 onChange={handleInputChange}
                                             >
                                                 <option value="none" disabled hidden>Select sex</option>

@@ -30,7 +30,7 @@ const findByName = name => {
 };
 
 const getCharacterConnections = (id, degree) => {
-  return api.get(`/characters/${id}/connections${degree ? `?degree=${degree}` : ''}`);
+  return api.get(`/characters/${id}/connections?degree=${degree}`);
 };
 
 const CharacterService = {
