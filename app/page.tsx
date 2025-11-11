@@ -58,7 +58,6 @@ const CharacterList = () => {
 
         CharacterDataService.getCharacterConnections(currentCharacterID, 0)
             .then(twistResponse => {
-                console.log(twistResponse.data);
                 setConnections(twistResponse.data || []);
                 setModifiedRelations(null); // Reset modified relations to reflect new server state
             })
