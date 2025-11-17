@@ -1,7 +1,7 @@
 'use client';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
-import React, { ChangeEvent, useEffect, useState } from 'react';
+import React, { ChangeEvent, useEffect, useState, useReducer } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
@@ -17,6 +17,31 @@ import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
 import Form from "react-bootstrap/Form";
 
+
+export type CharacterImage = string;
+
+interface CharacterState {
+    images: CharacterImage[];
+}
+
+export type CharacterAction =
+    | { type: 'UPDATE_IMAGES'; payload: CharacterImage[] }
+    | { type: 'ADD_IMAGE'; payload: CharacterImage }
+    | { type: 'REMOVE_IMAGE'; payload: CharacterImage }; // Payload is the image URL to remove
+
+function characterReducer(state: CharacterState, action: CharacterAction): CharacterState {
+    switch (action.type) {
+        case 'UPDATE_IMAGES':
+            return { ...state, images: action.payload };
+        case 'ADD_IMAGE':
+            return { ...state, images: [...state.images, action.payload] };
+        case 'REMOVE_IMAGE':
+            return { ...state, images: state.images.filter(image => image !== action.payload) };
+        default:
+            return state; // Should not happen with exhaustive type checking, but good practice
+    }
+}
+
 const CharacterList = () => {
     const router = useRouter();
     const pathname = usePathname();
@@ -29,6 +54,10 @@ const CharacterList = () => {
     const [modifiedRelations, setModifiedRelations] = useState<CharacterRelations[] | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [showErrorModal, setShowErrorModal] = useState(false);
+    const [characterState, dispatch] = useReducer(characterReducer, {
+        images: [],
+    });
+    const [currentPictureID, setCurrentPictureID] = useState<number>(0);
 
     useEffect(() => {
         retrieveCharacterIDs();
@@ -76,9 +105,10 @@ const CharacterList = () => {
     const fetchCharacterData = (id: string) => {
         Promise.all([CharacterDataService.get(id), CharacterDataService.getCharacterConnections(id, 0)])
             .then(([charResponse, twistResponse]) => {
-                const { id: charId, ...restOfCharData } = charResponse.data;
+                const { id: charId, images, ...restOfCharData } = charResponse.data;
                 setCurrentCharacterID(charId);
                 setCurrentCharacter(restOfCharData);
+                dispatch({ type: 'UPDATE_IMAGES', payload: images || [] }); // Dispatch images to reducer
                 setConnections(twistResponse.data || []);
                 setModifiedRelations(null); // Reset modified relations on character change
             })
@@ -105,7 +135,11 @@ const CharacterList = () => {
 
 
     const updateCharacter = () => {
-        CharacterDataService.update(currentCharacterID, currentCharacter)
+        if (!currentCharacterID || !currentCharacter) return;
+
+        const characterDataWithImages = { ...currentCharacter, images: characterState.images };
+
+        CharacterDataService.update(currentCharacterID, characterDataWithImages)
             .then(response => { })
             .catch(e => {
                 console.error(e);
@@ -119,8 +153,9 @@ const CharacterList = () => {
             .then(response => {
                 retrieveCharacterIDs();
                 setCurrentCharacterID(response.data.id);
-                const { id, ...restOfResponseData } = response.data;
+                const { id, images, ...restOfResponseData } = response.data; // Destructure images from response
                 setCurrentCharacter(restOfResponseData);
+                dispatch({ type: 'UPDATE_IMAGES', payload: images || [] });
             })
             .catch(e => {
                 console.error(e);
@@ -171,12 +206,12 @@ const CharacterList = () => {
                                 setCurrentCharacterID(null);
                                 setCurrentCharacter({
                                     roleplaying: [],
-                                    images: [],
                                     name: "",
                                     appearance: "",
                                     background: "",
                                     sex: 9,
-                                } as CharacterDataWithoutID)
+                                } as CharacterDataWithoutID);
+                                dispatch({ type: 'UPDATE_IMAGES', payload: [] }); // Clear images for new character
                             }}
                         >+</Button>
                     </Col>
@@ -191,10 +226,8 @@ const CharacterList = () => {
                         <div className="w-1/3 flex flex-col gap-4">
                             {/* Images section */}
                             <div className="max-h-[400px] overflow-y-auto rounded p-2 flex flex-col items-center">
-                                {currentCharacter.images && (
-                                    <ImageGrid
-                                        images={currentCharacter.images}
-                                    />
+                                {characterState.images && (
+                                    <ImageGrid images={characterState.images} dispatch={dispatch} />
                                 )}
                             </div>
                             {/* Family Tree section */}
