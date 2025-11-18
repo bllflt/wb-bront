@@ -12,6 +12,7 @@ import AttributeListEditor from "./_components/AttributeListEditor";
 import FamilyTree from './_components/FamilyTree';
 import RelationsListEditor from "./_components/RelationsListEditor";
 import CharacterDataService from './services/CharacterService';
+import AiService from "./services/AiService";
 import { CharacterDataWithoutID, CharacterRelations, CharacterID } from './types';
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
@@ -27,7 +28,7 @@ interface CharacterState {
 export type CharacterAction =
     | { type: 'UPDATE_IMAGES'; payload: CharacterImage[] }
     | { type: 'ADD_IMAGE'; payload: CharacterImage }
-    | { type: 'REMOVE_IMAGE'; payload: CharacterImage }; // Payload is the image URL to remove
+    | { type: 'REMOVE_IMAGE'; payload: CharacterImage };
 
 function characterReducer(state: CharacterState, action: CharacterAction): CharacterState {
     switch (action.type) {
@@ -57,7 +58,6 @@ const CharacterList = () => {
     const [characterState, dispatch] = useReducer(characterReducer, {
         images: [],
     });
-    const [currentPictureID, setCurrentPictureID] = useState<number>(0);
 
     useEffect(() => {
         retrieveCharacterIDs();

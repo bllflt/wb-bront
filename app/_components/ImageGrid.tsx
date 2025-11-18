@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Carousel from 'react-bootstrap/Carousel';
+import AiService from '../services/AiService';
 import Image from 'react-bootstrap/Image';
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import { CharacterAction, CharacterImage } from '../page'; // Assuming type export from page.tsx
+import { CharacterAction, CharacterImage } from '../page';
 
 
 interface ImageGridProps {
@@ -55,6 +56,10 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch }) => {
                         }}
                             disabled={images.length === 0}>Delete</Button>
                         <Button
+                            onClick={() => {
+                                const imageToCaption = images[activeIndex];
+                                AiService.createWork({ 'image': imageToCaption });
+                            }}
                             disabled={images.length === 0}
                         >Check</Button>
                         <Button>Upload</Button>
