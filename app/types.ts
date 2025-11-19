@@ -1,7 +1,6 @@
 export interface CharacterData {
     id: number;
     name: string;
-    appearance: string;
     sex: number;
     roleplaying: string[];
     background: string;

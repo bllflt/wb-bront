@@ -7,12 +7,12 @@ import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import ErrorModal from './_components/ErrorModal';
+import { ReconcileDescriptionModal, CDProps } from "./_components/ReconcileDescription";
 import ImageGrid from './_components/ImageGrid';
 import AttributeListEditor from "./_components/AttributeListEditor";
 import FamilyTree from './_components/FamilyTree';
 import RelationsListEditor from "./_components/RelationsListEditor";
 import CharacterDataService from './services/CharacterService';
-import AiService from "./services/AiService";
 import { CharacterDataWithoutID, CharacterRelations, CharacterID } from './types';
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
@@ -23,12 +23,14 @@ export type CharacterImage = string;
 
 interface CharacterState {
     images: CharacterImage[];
+    appearance: string;
 }
 
 export type CharacterAction =
     | { type: 'UPDATE_IMAGES'; payload: CharacterImage[] }
     | { type: 'ADD_IMAGE'; payload: CharacterImage }
-    | { type: 'REMOVE_IMAGE'; payload: CharacterImage };
+    | { type: 'REMOVE_IMAGE'; payload: CharacterImage }
+    | { type: 'UPDATE_STRING'; payload: [string, string] }
 
 function characterReducer(state: CharacterState, action: CharacterAction): CharacterState {
     switch (action.type) {
@@ -38,6 +40,8 @@ function characterReducer(state: CharacterState, action: CharacterAction): Chara
             return { ...state, images: [...state.images, action.payload] };
         case 'REMOVE_IMAGE':
             return { ...state, images: state.images.filter(image => image !== action.payload) };
+        case 'UPDATE_STRING':
+            return { ...state, [action.payload[0]]: action.payload[1] };
         default:
             return state; // Should not happen with exhaustive type checking, but good practice
     }
@@ -55,8 +59,11 @@ const CharacterList = () => {
     const [modifiedRelations, setModifiedRelations] = useState<CharacterRelations[] | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [showErrorModal, setShowErrorModal] = useState(false);
+    const [eventMessage, setEventMessage] = useState<CDProps | null>(null);
+    const [showEventModal, setShowEventModal] = useState(false);
     const [characterState, dispatch] = useReducer(characterReducer, {
         images: [],
+        appearance: '',
     });
 
     useEffect(() => {
@@ -67,6 +74,24 @@ const CharacterList = () => {
             if (Number(charIdFromUrl) !== currentCharacterID) {
                 fetchCharacterData(charIdFromUrl);
             }
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        const charIdFromUrl = searchParams.get('characterId');
+        if (charIdFromUrl) {
+            const evtSource = new EventSource(`http://127.0.0.1:5000/api/v1/events/character/${charIdFromUrl}/`);
+            evtSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data) {
+                    setEventMessage(data);
+                    setShowEventModal(true);
+                }
+            };
+
+            return () => {
+                evtSource.close();
+            };
         }
     }, [searchParams]);
 
@@ -105,10 +130,12 @@ const CharacterList = () => {
     const fetchCharacterData = (id: string) => {
         Promise.all([CharacterDataService.get(id), CharacterDataService.getCharacterConnections(id, 0)])
             .then(([charResponse, twistResponse]) => {
-                const { id: charId, images, ...restOfCharData } = charResponse.data;
+                console.log(charResponse.data)
+                const { id: charId, images, appearance, ...restOfCharData } = charResponse.data;
                 setCurrentCharacterID(charId);
                 setCurrentCharacter(restOfCharData);
-                dispatch({ type: 'UPDATE_IMAGES', payload: images || [] }); // Dispatch images to reducer
+                dispatch({ type: 'UPDATE_IMAGES', payload: images || [] });
+                dispatch({ type: 'UPDATE_STRING', payload: ['appearance', appearance || ''] });
                 setConnections(twistResponse.data || []);
                 setModifiedRelations(null); // Reset modified relations on character change
             })
@@ -119,9 +146,10 @@ const CharacterList = () => {
             });
     }
 
-    const handleInputChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+    const handleInputChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
         const { name, value } = event.target;
-        setCurrentCharacter({ ...currentCharacter, [name]: value } as CharacterDataWithoutID);
+        const parsedValue = name === 'sex' ? parseInt(value, 10) : value;
+        setCurrentCharacter({ ...currentCharacter, [name]: parsedValue } as CharacterDataWithoutID);
     };
 
 
@@ -137,7 +165,7 @@ const CharacterList = () => {
     const updateCharacter = () => {
         if (!currentCharacterID || !currentCharacter) return;
 
-        const characterDataWithImages = { ...currentCharacter, images: characterState.images };
+        const characterDataWithImages = { ...currentCharacter, images: characterState.images, appearance: characterState.appearance };
 
         CharacterDataService.update(currentCharacterID, characterDataWithImages)
             .then(response => { })
@@ -153,9 +181,10 @@ const CharacterList = () => {
             .then(response => {
                 retrieveCharacterIDs();
                 setCurrentCharacterID(response.data.id);
-                const { id, images, ...restOfResponseData } = response.data; // Destructure images from response
+                const { id, images, appearance, ...restOfResponseData } = response.data;
                 setCurrentCharacter(restOfResponseData);
                 dispatch({ type: 'UPDATE_IMAGES', payload: images || [] });
+                dispatch({ type: 'UPDATE_STRING', payload: ['appearance', appearance || ''] })
             })
             .catch(e => {
                 console.error(e);
@@ -185,6 +214,12 @@ const CharacterList = () => {
                 onHide={() => setShowErrorModal(false)}
                 error={error}
             />
+            <ReconcileDescriptionModal
+                show={showEventModal}
+                onHide={() => setShowEventModal(false)}
+                data={eventMessage}
+                dispatch={dispatch}
+            />
             <Form>
                 <Row>
                     <Col xs="auto">
@@ -207,11 +242,11 @@ const CharacterList = () => {
                                 setCurrentCharacter({
                                     roleplaying: [],
                                     name: "",
-                                    appearance: "",
                                     background: "",
                                     sex: 9,
                                 } as CharacterDataWithoutID);
-                                dispatch({ type: 'UPDATE_IMAGES', payload: [] }); // Clear images for new character
+                                dispatch({ type: 'UPDATE_IMAGES', payload: [] });
+                                dispatch({ type: 'UPDATE_STRING', payload: ['appearance', ''] });
                             }}
                         >+</Button>
                     </Col>
@@ -281,8 +316,9 @@ const CharacterList = () => {
                                     <Form.Control
                                         as="textarea"
                                         name="appearance"
-                                        value={currentCharacter.appearance}
-                                        onChange={handleInputChange}
+                                        value={characterState.appearance || ''}
+                                        onChange={
+                                            (e) => dispatch({ type: 'UPDATE_STRING', payload: [e.target.name, e.target.value] })}
                                         placeholder="Enter appearance"
                                         rows={4}
                                     />
@@ -302,7 +338,7 @@ const CharacterList = () => {
                                         <Form.Control
                                             as="textarea"
                                             name="background"
-                                            value={currentCharacter.background}
+                                            value={currentCharacter.background || ''}
                                             onChange={handleInputChange}
                                             placeholder="Enter background"
                                             rows={14}
