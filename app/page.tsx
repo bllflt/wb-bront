@@ -260,7 +260,7 @@ const CharacterList = () => {
                         {/* Left column */}
                         <div className="w-1/3 flex flex-col gap-4">
                             {/* Images section */}
-                            <div className="max-h-[400px] overflow-y-auto rounded p-2 flex flex-col items-center">
+                            <div className="max-h-[400px] p-2 flex flex-col items-center">
                                 {characterState.images && (
                                     <ImageGrid images={characterState.images} dispatch={dispatch} />
                                 )}
