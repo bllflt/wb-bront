@@ -13,6 +13,7 @@ import AttributeListEditor from "./_components/AttributeListEditor";
 import FamilyTree from './_components/FamilyTree';
 import RelationsListEditor from "./_components/RelationsListEditor";
 import CharacterDataService from './services/CharacterService';
+import ChatModal from './_components/ChatModal'; // <--- added import
 import { CharacterDataWithoutID, CharacterRelations, CharacterID } from './types';
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
@@ -61,6 +62,7 @@ const CharacterList = () => {
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [eventMessage, setEventMessage] = useState<CDProps | null>(null);
     const [showEventModal, setShowEventModal] = useState(false);
+    const [showChatModal, setShowChatModal] = useState(false); // <--- added state
     const [characterState, dispatch] = useReducer(characterReducer, {
         images: [],
         appearance: '',
@@ -209,6 +211,8 @@ const CharacterList = () => {
 
     return (
         <div>
+            <ChatModal show={showChatModal} onHide={() => setShowChatModal(false)} /> {/* Chat modal included */}
+
             <ErrorModal
                 show={showErrorModal}
                 onHide={() => setShowErrorModal(false)}
@@ -249,10 +253,16 @@ const CharacterList = () => {
                                 dispatch({ type: 'UPDATE_STRING', payload: ['appearance', ''] });
                             }}
                         >+</Button>
+                        <Button
+                            className="ms-2"
+                            variant="outline-primary"
+                            onClick={() => setShowChatModal(true)}
+                        >
+                            Chat
+                        </Button>
                     </Col>
                 </Row>
             </Form>
-
 
             <div>
                 {currentCharacter ? (
