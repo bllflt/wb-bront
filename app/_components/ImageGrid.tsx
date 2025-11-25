@@ -52,6 +52,10 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch }) => {
                             if (images.length > 0) {
                                 const imageToRemove = images[activeIndex];
                                 dispatch({ type: 'REMOVE_IMAGE', payload: imageToRemove });
+                                // If the last image was deleted, adjust the active index.
+                                if (activeIndex >= images.length - 1) {
+                                    setActiveIndex(Math.max(0, images.length - 2));
+                                }
                             }
                         }}
                             disabled={images.length === 0}>Delete</Button>
