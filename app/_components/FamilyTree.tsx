@@ -73,7 +73,18 @@ const styleSheet: cytoscape.StylesheetJsonBlock[] = [{
     'opacity': 0, // Make the node invisible
   },
 },
-
+// --- Invisible Faction Node ---
+{
+  selector: 'node[type = "faction"]',
+  style: {
+    'background-color': '#fff', // Transparent background
+    'border-width': 0,
+    'width': 1,
+    'height': 1,
+    'label': '',
+    'opacity': 0, // Make the node invisible
+  },
+},
 // --- Edge Styles (Relationships) ---
 // Spouse/Marriage Line (Horizontal)
 {
@@ -105,6 +116,15 @@ const styleSheet: cytoscape.StylesheetJsonBlock[] = [{
     'target-arrow-shape': 'none',
     'width': 2,
   },
+},
+{
+  selector: 'edge[type = "org_member"]',
+  style: {
+    'curve-style': 'straight',
+    'line-color': '#ccc', // Gray
+    'target-arrow-shape': 'none',
+    'width': 2,
+  },
 }]
 
 
@@ -114,7 +134,7 @@ interface FamilyTreeProps {
 
 interface Participant {
   id: number;
-  role: 1 | 2; // 1 for parent, 2 for child
+  role: 1 | 2 | 3; // 1 for parent, 2 for child, 3 for member
   sex: number;
   name: string;
 }
@@ -149,11 +169,12 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => 
         // Each union from the API represents a family unit.
         // We create an invisible "union" node in the graph for it.
         const unionNodeId = `p${union.id}`;
-        const unionType = union.type === 1 ? 'marriage_unit' : 'lumberjack';
+        const unionType = union.type === 1 ? 'marriage_unit' : 'faction';
         elements.push({ data: { id: unionNodeId, type: unionType } });
 
         const parents = union.participants.filter(p => p.role === 1);
         const children = union.participants.filter(p => p.role === 2);
+        const members = union.participants.filter(p => p.role === 3);
 
         // Add parent nodes and connect them to the union node.
         parents.forEach(parent => {
@@ -177,7 +198,18 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => 
           }
           elements.push({ data: { source: unionNodeId, target: child.id.toString(), type: 'parent_child' } });
         });
+
+        // Add member nodes.
+        members.forEach(member => {
+          if (!seenParticipants.has(member.id)) {
+            const gender = member.sex === 1 ? 'male' : 'female';
+            elements.push({ data: { id: member.id.toString(), gender: gender, label: member.name } });
+            seenParticipants.add(member.id);
+          }
+          elements.push({ data: { source: unionNodeId, target: member.id.toString(), type: 'org_member' } });
+        });
       }
+
       return elements;
     };
 

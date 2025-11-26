@@ -232,6 +232,7 @@ const CharacterList = () => {
                             id="character-combo"
                             placeholder="Choose or type..."
                             labelKey="label"
+                            defaultSelected={[{ id: currentCharacterID, label: currentCharacter?.name || '' }]}
                             onChange={(selected) => {
                                 const item = selected[0];
                                 if (item) {
