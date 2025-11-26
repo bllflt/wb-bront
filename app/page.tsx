@@ -7,7 +7,7 @@ import { Typeahead } from 'react-bootstrap-typeahead';
 import "react-bootstrap-typeahead/css/Typeahead.css";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
-import Form from "react-bootstrap/Form";
+import Form from 'react-bootstrap/Form';
 import Row from "react-bootstrap/Row";
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
@@ -18,7 +18,7 @@ import FamilyTree from './_components/FamilyTree';
 import ImageGrid from './_components/ImageGrid';
 import { CDProps, ReconcileDescriptionModal } from "./_components/ReconcileDescription";
 import RelationsListEditor from "./_components/RelationsListEditor";
-import CharacterDataService from './services/CharacterService';
+import CharacterDataService from "./services/CharacterService";
 import { CharacterDataWithoutID, CharacterID, CharacterRelations } from './types';
 
 
@@ -58,8 +58,6 @@ const CharacterList = () => {
     const [characterIDs, setCharacterIDs] = useState<CharacterID[]>([]);
     const [currentCharacter, setCurrentCharacter] = useState<CharacterDataWithoutID | null>(null);
     const [currentCharacterID, setCurrentCharacterID] = useState<number | null>(null);
-    const [connections, setConnections] = useState<any[]>([]);
-    const [modifiedRelations, setModifiedRelations] = useState<CharacterRelations[] | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [eventMessage, setEventMessage] = useState<CDProps | null>(null);
@@ -111,36 +109,19 @@ const CharacterList = () => {
             });
     }
 
-    const refreshCharacterData = () => {
-        if (!currentCharacterID) return;
-
-        CharacterDataService.getCharacterConnections(currentCharacterID, 0)
-            .then(twistResponse => {
-                setConnections(twistResponse.data || []);
-                setModifiedRelations(null); // Reset modified relations to reflect new server state
-            })
-            .catch(e => {
-                console.error(e);
-                setError("Failed to refresh character connections.");
-                setShowErrorModal(true);
-            });
-    };
-
     const handleCharacterChange = (id: string | null) => {
         const newUrl = id ? `${pathname}?characterId=${id}` : pathname;
         router.push(newUrl);
     };
 
     const fetchCharacterData = (id: string) => {
-        Promise.all([CharacterDataService.get(id), CharacterDataService.getCharacterConnections(id, 0)])
-            .then(([charResponse, twistResponse]) => {
+        CharacterDataService.get(id)
+            .then(charResponse => {
                 const { id: charId, images, appearance, ...restOfCharData } = charResponse.data;
                 setCurrentCharacterID(charId);
                 setCurrentCharacter(restOfCharData);
                 dispatch({ type: 'UPDATE_IMAGES', payload: images || [] });
                 dispatch({ type: 'UPDATE_STRING', payload: ['appearance', appearance || ''] });
-                setConnections(twistResponse.data || []);
-                setModifiedRelations(null); // Reset modified relations on character change
             })
             .catch(e => {
                 console.error(e);
@@ -159,11 +140,6 @@ const CharacterList = () => {
     const handleAttributesChange = (newAttributes: string[]) => {
         setCurrentCharacter({ ...currentCharacter, roleplaying: newAttributes } as CharacterDataWithoutID);
     };
-
-    const handleRelationChange = (newRelations: CharacterRelations[]) => {
-        setModifiedRelations(newRelations);
-    };
-
 
     const updateCharacter = () => {
         if (!currentCharacterID || !currentCharacter) return;
@@ -232,14 +208,14 @@ const CharacterList = () => {
                             id="character-combo"
                             placeholder="Choose or type..."
                             labelKey="label"
-                            defaultSelected={[{ id: currentCharacterID, label: currentCharacter?.name || '' }]}
+                            defaultSelected={currentCharacterID ? [{ id: currentCharacterID, label: currentCharacter?.name || '' }] : []}
                             onChange={(selected) => {
                                 const item = selected[0];
                                 if (item) {
                                     handleCharacterChange(item.id);
                                 }
                             }}
-                            options={characterIDs.map((i) => {
+                            options={characterIDs.map(i => {
                                 return { id: i.id, label: i.name }
                             })}
                         />
@@ -363,12 +339,8 @@ const CharacterList = () => {
                                     <Tab eventKey="key-relations" title="Key Relations" id="keyrelations-tab">
                                         {currentCharacterID && (
                                             <RelationsListEditor
-                                                connections={connections}
-                                                onChange={handleRelationChange}
-                                                modifiedRelations={modifiedRelations}
                                                 characterIDs={characterIDs}
                                                 characterId={currentCharacterID}
-                                                onDataChange={refreshCharacterData}
                                             />
                                         )}
 
