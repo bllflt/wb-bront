@@ -33,6 +33,7 @@
     "pm2": "^6.0.13",
     "react": "19.1.0",
     "react-bootstrap": "^2.10.10",
+    "react-bootstrap-typeahead": "^6.4.1",
     "react-cytoscapejs": "^2.0.0",
     "react-dom": "19.1.0",
     "react-ui": "^1.0.0-beta.32",

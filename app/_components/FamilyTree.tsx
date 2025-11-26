@@ -178,7 +178,6 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => 
           elements.push({ data: { source: unionNodeId, target: child.id.toString(), type: 'parent_child' } });
         });
       }
-      console.log(elements)
       return elements;
     };
 

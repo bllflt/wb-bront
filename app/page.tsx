@@ -1,23 +1,25 @@
 'use client';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
-import React, { ChangeEvent, useEffect, useState, useReducer } from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { ChangeEvent, useEffect, useReducer, useState } from 'react';
+import { Typeahead } from 'react-bootstrap-typeahead';
+import "react-bootstrap-typeahead/css/Typeahead.css";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
+import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
-import ErrorModal from './_components/ErrorModal';
-import { ReconcileDescriptionModal, CDProps } from "./_components/ReconcileDescription";
-import ImageGrid from './_components/ImageGrid';
-import AttributeListEditor from "./_components/AttributeListEditor";
-import FamilyTree from './_components/FamilyTree';
-import RelationsListEditor from "./_components/RelationsListEditor";
-import CharacterDataService from './services/CharacterService';
-import ChatModal from './_components/ChatModal'; // <--- added import
-import { CharacterDataWithoutID, CharacterRelations, CharacterID } from './types';
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
-import Form from "react-bootstrap/Form";
+import AttributeListEditor from "./_components/AttributeListEditor";
+import ChatModal from './_components/ChatModal';
+import ErrorModal from './_components/ErrorModal';
+import FamilyTree from './_components/FamilyTree';
+import ImageGrid from './_components/ImageGrid';
+import { CDProps, ReconcileDescriptionModal } from "./_components/ReconcileDescription";
+import RelationsListEditor from "./_components/RelationsListEditor";
+import CharacterDataService from './services/CharacterService';
+import { CharacterDataWithoutID, CharacterID, CharacterRelations } from './types';
 
 
 export type CharacterImage = string;
@@ -132,7 +134,6 @@ const CharacterList = () => {
     const fetchCharacterData = (id: string) => {
         Promise.all([CharacterDataService.get(id), CharacterDataService.getCharacterConnections(id, 0)])
             .then(([charResponse, twistResponse]) => {
-                console.log(charResponse.data)
                 const { id: charId, images, appearance, ...restOfCharData } = charResponse.data;
                 setCurrentCharacterID(charId);
                 setCurrentCharacter(restOfCharData);
@@ -211,7 +212,7 @@ const CharacterList = () => {
 
     return (
         <div>
-            <ChatModal show={showChatModal} onHide={() => setShowChatModal(false)} /> {/* Chat modal included */}
+            <ChatModal show={showChatModal} onHide={() => setShowChatModal(false)} />
 
             <ErrorModal
                 show={showErrorModal}
@@ -227,17 +228,20 @@ const CharacterList = () => {
             <Form>
                 <Row>
                     <Col xs="auto">
-                        <Form.Select
-                            data-width="auto"
-                            value={currentCharacterID || "none"}
-                            style={{ width: 'fit-content' }}
-                            onChange={e => handleCharacterChange(e.target.value)}
-                        >
-                            <option value="none" disabled hidden> Select a Character</option>
-                            {characterIDs.map((e) => {
-                                return <option value={e.id} key={e.id}> {e.name}</option>
+                        <Typeahead
+                            id="character-combo"
+                            placeholder="Choose or type..."
+                            labelKey="label"
+                            onChange={(selected) => {
+                                const item = selected[0];
+                                if (item) {
+                                    handleCharacterChange(item.id);
+                                }
+                            }}
+                            options={characterIDs.map((i) => {
+                                return { id: i.id, label: i.name }
                             })}
-                        </Form.Select>
+                        />
                     </Col>
                     <Col>
                         <Button variant="primary"
