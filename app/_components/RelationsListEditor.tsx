@@ -7,6 +7,7 @@ import Row from "react-bootstrap/Row";
 import ErrorModal from './ErrorModal';
 import { ChangeEvent, useEffect, useState } from "react";
 import { CharacterRelations, CharacterID } from '../types';
+import { Typeahead } from 'react-bootstrap-typeahead';
 
 import PartnershipService from "../services/partnershipService.js";
 import CharacterDataService from "../services/CharacterService.js";
@@ -37,6 +38,8 @@ export enum RelationshipType {
     Subordinate = 22,
     Retainer = 23,
     Sibling = 24,
+    Member = 25,
+    Peer = 26,
 }
 
 interface CharacterUnions { value: number; label: string; }
@@ -52,23 +55,27 @@ interface RelationshipEditorProps {
     characterId: number;
     onRelationChange: (field: string, value: string | number | null) => void;
     unions: CharacterUnions[];
+    factions: { value: number; label: string; }[] | [][];
     onDelete: () => void;
 }
 
-const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, unions, characterIDs, onRelationChange, onDelete }) => {
+const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, unions, factions, characterIDs, onRelationChange, onDelete }) => {
     const { type = null, target = null, source = null } = relation;
 
 
     const isParental = type === RelationshipType.Parents;
     const isSibling = type === RelationshipType.Sibling;
     const isChild = type === RelationshipType.Child;
+    const isMember = type === RelationshipType.Member;
+    const isPeer = type == RelationshipType.Peer;
 
-    const targetCharacterName = isSibling ? characterIDs.find(c => c.id === target)?.name : '';
+    const targetCharacterName = (isSibling || isPeer) ? characterIDs.find(c => c.id === target)?.name : '';
+    const selectedFaction = isMember ? factions.filter(f => f.value === source) : [];
 
     return (
         <Row className="align-items-center">
             <Col>
-                {!isParental && !isSibling && !isChild && ( // For standard editable relationships
+                {!isParental && !isSibling && !isChild && !isMember && !isPeer && ( // For standard editable relationships
                     <div className="flex items-center gap-2">
                         <Form.Select
                             style={{ width: 'auto' }}
@@ -87,6 +94,7 @@ const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, union
                             <option value={RelationshipType.Child}>Child</option>
                             <option value={RelationshipType.Guardian}>Guardian</option>
                             <option value={RelationshipType.Ward}>Ward</option>
+                            <option value={RelationshipType.Member}>Member</option>
                             <option value={RelationshipType.Mentor}>Mentor</option>
                             <option value={RelationshipType.Lord}>Lord</option>
                             <option value={RelationshipType.Vassal}>Vassal</option>
@@ -99,7 +107,6 @@ const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, union
                             <option value={RelationshipType.Friend}>Friend</option>
                             <option value={RelationshipType.Commander}>Commander</option>
                             <option value={RelationshipType.Subordinate}>Subordinate</option>
-                            <option value={RelationshipType.LordAlt}>Lord</option>
                             <option value={RelationshipType.Retainer}>Retainer</option>
                         </Form.Select>
                         <Form.Select
@@ -159,8 +166,26 @@ const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, union
                         <span>Sibling: <strong>{targetCharacterName}</strong></span>
                     </div>
                 )}
+                {isPeer && (
+                    <div className="flex items-center">
+                        <span>Peer: <strong>{targetCharacterName}</strong></span>
+                    </div>
+                )}
+                {isMember && (
+                    <div className="flex items-center flex-wrap gap-2">
+                        <span> Member of </span>
+                        <Typeahead
+                            id="org_combo"
+                            labelKey="label"
+                            options={factions}
+                            defaultSelected={selectedFaction as any[]}
+                            clearButton
+                            onChange={(selecte) => { }}
+                        />
+                    </div>
+                )}
             </Col>
-            {!isSibling && (
+            {!isSibling && !isPeer && (
                 <Col xs="auto">
                     <button
                         type="button"
@@ -179,24 +204,35 @@ const expandRelations = (connections: any[], currentCharacterId: number) => {
     const unions: CharacterUnions[] = [];
     const relations: CharacterRelations[] = [];
     const siblingMap = new Map<number, { name: string }>();
+    const peerMap = new Map<number, { name: string }>();
+
+    enum DBValue {
+        LIASON = 1,
+        FACTION = 2,
+        PARENT = 1,
+        CHILD = 2,
+        MEMBER = 3
+    };
 
     for (const union of connections) {
-        // Process Unions (Marriages, etc.)
-        if ([RelationshipType.Spouse, RelationshipType.Concubine].includes(union.type)) {
-            unions.push({ value: union.id, label: union.participants.filter((p: any) => p.role == 1).map((p: any) => p.name).join(' & ') });
 
-            // Create editable relations for the current character's partners
-            if (union.participants.filter((p: any) => p.role == 1).some((p: any) => p.id === currentCharacterId)) {
-                for (const participant of union.participants.filter((p: any) => p.role == 1)) {
+        if (union.type == DBValue.LIASON) {
+            // Liasons (Marriages, etc.)
+            unions.push({ value: union.id, label: union.participants.filter((p: any) => p.role == 1).map((p: any) => p.name).join(' & ') });
+        }
+        // Create editable relations for the current character's partners
+        if (union.type == DBValue.LIASON) {
+            if (union.participants.filter((p: any) => p.role == DBValue.PARENT).some((p: any) => p.id === currentCharacterId)) {
+                for (const participant of union.participants.filter((p: any) => p.role == DBValue.PARENT)) {
                     if (participant.id !== currentCharacterId) {
                         let expandedUnion: RelationshipType;
-                        if (union.type === RelationshipType.Spouse && union.legitimate && union.is_primary) {
+                        if (union.legitimate && union.is_primary) {
                             expandedUnion = RelationshipType.Spouse;
                         }
-                        else if (union.type === RelationshipType.Spouse && union.legitimate && !union.is_primary) {
+                        else if (union.legitimate && !union.is_primary) {
                             expandedUnion = RelationshipType.Concubine;
                         }
-                        else { // if (union.type === RelationshipType.Spouse && !union.legitimate) or other cases
+                        else { // if (!union.legitimate) or other cases
                             expandedUnion = RelationshipType.Lover;
                         }
                         relations.push({ type: expandedUnion, source: union.id, target: participant.id });
@@ -205,20 +241,28 @@ const expandRelations = (connections: any[], currentCharacterId: number) => {
             }
 
             // Create editable relations for children of this union
-            for (const child of union.participants.filter((p: any) => p.role == 2)) {
+            for (const child of union.participants.filter((p: any) => p.role == DBValue.CHILD)) {
                 relations.push({ type: RelationshipType.Parents, source: union.id, target: child.id });
             }
 
             // Find siblings of the current character
-            const isCurrentCharChild = union.participants.filter((p: any) => p.role == 2).some((c: any) => c.id === currentCharacterId);
+            const isCurrentCharChild = union.participants.filter((p: any) => p.role == DBValue.CHILD).some((c: any) => c.id === currentCharacterId);
             if (isCurrentCharChild) {
-                for (const sibling of union.participants.filter((p: any) => p.role == 2)) {
+                for (const sibling of union.participants.filter((p: any) => p.role == DBValue.CHILD)) {
                     if (sibling.id !== currentCharacterId && !siblingMap.has(sibling.id)) {
                         siblingMap.set(sibling.id, { name: sibling.name });
                     }
                 }
             }
+        } else {
+            // Faction
+            relations.push({ type: RelationshipType.Member, source: union.id, target: currentCharacterId })
+            for (const peer of union.participants.filter((p: any) => p.id !== currentCharacterId)) {
+                peerMap.set(peer.id, { name: peer.name })
+            }
         }
+
+
     }
 
     // Add all unique siblings as non-editable relations
@@ -226,8 +270,21 @@ const expandRelations = (connections: any[], currentCharacterId: number) => {
         relations.push({ type: RelationshipType.Sibling, source: 0, target: id });
     });
 
+    peerMap.forEach((_peer, id) => {
+        relations.push({ type: RelationshipType.Peer, source: 0, target: id });
+    });
+
     return { unions, relations };
 };
+
+const winnowFactions = (Rawfactions: any[]) => {
+    const factions = []
+    for (const faction of Rawfactions) {
+        factions.push({ value: faction.id, label: faction.name });
+    }
+    return { factions };
+};
+
 
 const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ characterIDs, characterId }) => {
     // Handle change of a single relation
@@ -235,21 +292,26 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ characterIDs,
     const [internalUnions, setInternalUnions] = useState<CharacterUnions[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [showErrorModal, setShowErrorModal] = useState(false);
+    const [internalFactions, setInternalFactions] = useState<[]>([]);
+
 
     const fetchData = () => {
         if (!characterId) return;
 
-        CharacterDataService.getCharacterConnections(characterId, 0)
-            .then(response => {
-                const { unions, relations: expandedRelations } = expandRelations(response.data || [], characterId);
-                setInternalUnions(unions);
-                setInternalRelations(expandedRelations);
-            })
-            .catch(e => {
-                console.error(e);
-                setError("Failed to refresh character connections.");
-                setShowErrorModal(true);
-            });
+        Promise.all([
+            CharacterDataService.getCharacterConnections(characterId, 0),
+            PartnershipService.getNamedFactions()
+        ]).then(([connResponse, factionResponse]) => {
+            const { unions, relations: expandedRelations } = expandRelations(connResponse.data || [], characterId);
+            const { factions } = winnowFactions(factionResponse.data);
+            setInternalUnions(unions);
+            setInternalRelations(expandedRelations);
+            setInternalFactions(factions);
+        }).catch(e => {
+            console.error(e);
+            setError("Failed to refresh character connections.");
+            setShowErrorModal(true);
+        });
     };
 
     useEffect(() => {
@@ -375,6 +437,7 @@ const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ characterIDs,
                         <RelationshipEditor
                             unions={internalUnions}
                             relation={relation}
+                            factions={internalFactions}
                             characterIDs={characterIDs}
                             characterId={characterId}
                             onDelete={() => handleRelationDelete(index)}

@@ -62,7 +62,7 @@ const CharacterList = () => {
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [eventMessage, setEventMessage] = useState<CDProps | null>(null);
     const [showEventModal, setShowEventModal] = useState(false);
-    const [showChatModal, setShowChatModal] = useState(false); // <--- added state
+    const [showChatModal, setShowChatModal] = useState(false);
     const [characterState, dispatch] = useReducer(characterReducer, {
         images: [],
         appearance: '',
@@ -209,6 +209,7 @@ const CharacterList = () => {
                             placeholder="Choose or type..."
                             labelKey="label"
                             defaultSelected={currentCharacterID ? [{ id: currentCharacterID, label: currentCharacter?.name || '' }] : []}
+                            clearButton={true}
                             onChange={(selected) => {
                                 const item = selected[0];
                                 if (item) {

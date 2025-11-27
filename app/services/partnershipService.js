@@ -6,6 +6,9 @@ const PartnershipService = {
 
     getAllPartnerships: () => api.get('/partnerships'),
 
+    getNamedFactions: () => api.get('/partnerships?faction=true'),
+
+
     getPartnershipById: (id) => api.get(`/partnerships/${id}`),
 
     createPartnership: (data) => api.post('/partnerships', data),
