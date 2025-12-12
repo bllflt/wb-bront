@@ -16,27 +16,25 @@ import CharacterDataService from "../services/CharacterService.js";
 export enum RelationshipType {
     Spouse = 1,
     Concubine = 2,
-    Consort = 3,
     Betrothed = 4,
     Lover = 5,
-    Paramour = 6,
     Parents = 7,
     Child = 8,
     Guardian = 9,
     Ward = 10,
     Mentor = 11,
-    Lord = 12,
-    Vassal = 13,
+    Liege = 12,
+    Retainer = 13,
     Patron = 14,
     Client = 15,
     Protégé = 16,
     Employer = 17,
     Employee = 18,
     Master = 19,
+    Slave = 23,
     Friend = 20,
     Commander = 21,
     Subordinate = 22,
-    Retainer = 23,
     Sibling = 24,
     Member = 25,
     Peer = 26,
@@ -85,29 +83,26 @@ const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, union
                             <option value="" disabled>Select Relationship</option>
                             <option value={RelationshipType.Spouse}>Spouse</option>
                             <option value={RelationshipType.Concubine}>Concubine</option>
-                            <option value={RelationshipType.Consort}>Consort</option>
                             <option value={RelationshipType.Betrothed}>Betrothed</option>
                             <option value={RelationshipType.Lover}>Lover</option>
-                            <option value={RelationshipType.Paramour}>Paramour</option>
                             <option value={RelationshipType.Parents}>Parents</option>
-                            {/* Other non-parental relationships */}
                             <option value={RelationshipType.Child}>Child</option>
                             <option value={RelationshipType.Guardian}>Guardian</option>
                             <option value={RelationshipType.Ward}>Ward</option>
                             <option value={RelationshipType.Member}>Member</option>
                             <option value={RelationshipType.Mentor}>Mentor</option>
-                            <option value={RelationshipType.Lord}>Lord</option>
-                            <option value={RelationshipType.Vassal}>Vassal</option>
+                            <option value={RelationshipType.Liege}>Liege</option>
+                            <option value={RelationshipType.Retainer}>Retainer</option>
                             <option value={RelationshipType.Patron}>Patron</option>
                             <option value={RelationshipType.Client}>Client</option>
                             <option value={RelationshipType.Protégé}>Protégé</option>
                             <option value={RelationshipType.Employer}>Employer</option>
                             <option value={RelationshipType.Employee}>Employee</option>
                             <option value={RelationshipType.Master}>Master</option>
+                            <option value={RelationshipType.Slave}>Slave</option>
                             <option value={RelationshipType.Friend}>Friend</option>
                             <option value={RelationshipType.Commander}>Commander</option>
                             <option value={RelationshipType.Subordinate}>Subordinate</option>
-                            <option value={RelationshipType.Retainer}>Retainer</option>
                         </Form.Select>
                         <Form.Select
                             style={{ width: 'auto' }}
@@ -179,6 +174,7 @@ const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, union
                             labelKey="label"
                             options={factions}
                             defaultSelected={selectedFaction as any[]}
+                            allowNew
                             clearButton
                             onChange={(selecte) => { }}
                         />
