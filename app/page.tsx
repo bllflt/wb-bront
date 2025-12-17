@@ -58,6 +58,7 @@ const CharacterList = () => {
     const [characterIDs, setCharacterIDs] = useState<CharacterID[]>([]);
     const [currentCharacter, setCurrentCharacter] = useState<CharacterDataWithoutID | null>(null);
     const [currentCharacterID, setCurrentCharacterID] = useState<number | null>(null);
+    const [isTyping, setIsTyping] = useState(false)
     const [error, setError] = useState<string | null>(null);
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [eventMessage, setEventMessage] = useState<CDProps | null>(null);
@@ -208,14 +209,26 @@ const CharacterList = () => {
                             id="character-combo"
                             placeholder="Choose or type..."
                             labelKey="label"
-                            defaultSelected={currentCharacterID ? [{ id: currentCharacterID, label: currentCharacter?.name || '' }] : []}
+                            inputProps={{ type: "text" }}
+                            selected=
+                            {isTyping
+                                ? []
+                                : currentCharacterID
+                                    ? [{ id: currentCharacterID, label: currentCharacter?.name || '' }]
+                                    : []}
                             clearButton={true}
+                            onInputChange={() => setIsTyping(true)}
                             onChange={(selected) => {
+                                setIsTyping(false);
                                 const item = selected[0];
                                 if (item) {
+                                    setIsTyping(false);
                                     handleCharacterChange(item.id);
+                                } else {
+                                    setIsTyping(true);
                                 }
                             }}
+                            onBlur={() => { setIsTyping(false) }}
                             options={characterIDs.map(i => {
                                 return { id: i.id, label: i.name }
                             })}
