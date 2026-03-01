@@ -1,465 +1,764 @@
+
 'use client';
 
-import React from "react";
-import Form from "react-bootstrap/Form";
-import Col from "react-bootstrap/Col";
-import Row from "react-bootstrap/Row";
-import ErrorModal from './ErrorModal';
-import { ChangeEvent, useEffect, useState } from "react";
-import { CharacterRelations, CharacterID } from '../types';
+import { useEffect, useState } from 'react';
+import { Container, Row, Col, Button, ListGroup, Form } from 'react-bootstrap';
 import { Typeahead } from 'react-bootstrap-typeahead';
-
+import "react-bootstrap-typeahead/css/Typeahead.css";
 import PartnershipService from "../services/partnershipService.js";
 import CharacterDataService from "../services/CharacterService.js";
+import { CharacterID } from '../types.js';
 
+// Supported role codes (matching OpenAPI) plus a UI-only 'PARENT'
+const ROLE_CODES = [
+    "MATE", "CHILD", "MEMBER", "CONCUBINE", "BETROTHED", "PARAMOUR", "GUARDIAN", "WARD",
+    "MENTOR", "PROTEGE", "LIEGE", "RETAINER", "PATRON", "CLIENT", "EMPLOYER", "EMPLOYEE",
+    "MASTER", "SLAVE", "COMMANDER", "SUBBORDINATE", "FRIEND", "PARENT",
+];
 
-export enum RelationshipType {
-    Spouse = 1,
-    Concubine = 2,
-    Betrothed = 4,
-    Lover = 5,
-    Parents = 7,
-    Child = 8,
-    Guardian = 9,
-    Ward = 10,
-    Mentor = 11,
-    Liege = 12,
-    Retainer = 13,
-    Patron = 14,
-    Client = 15,
-    Protégé = 16,
-    Employer = 17,
-    Employee = 18,
-    Master = 19,
-    Slave = 23,
-    Friend = 20,
-    Commander = 21,
-    Subordinate = 22,
-    Sibling = 24,
-    Member = 25,
-    Peer = 26,
+const enum PartnershipType {
+    LIAISON = 1,
+    FACTION = 2
 }
 
-interface CharacterUnions { value: number; label: string; }
+// Map roles to their opposites for unnamed partnerships
+const OPPOSITE_ROLES: Record<string, string> = {
+    'PROTEGE': 'MENTOR',
+    'MENTOR': 'PROTEGE',
+    'LIEGE': 'RETAINER',
+    'RETAINER': 'LIEGE',
+    'PATRON': 'CLIENT',
+    'CLIENT': 'PATRON',
+    'EMPLOYER': 'EMPLOYEE',
+    'EMPLOYEE': 'EMPLOYER',
+    'MASTER': 'SLAVE',
+    'SLAVE': 'MASTER',
+    'COMMANDER': 'SUBBORDINATE',
+    'SUBBORDINATE': 'COMMANDER',
+    'GUARDIAN': 'WARD',
+    'WARD': 'GUARDIAN',
+    'FRIEND': 'FRIEND',
+    'MATE': 'MATE',
+    'BETROTHED': 'BETROTHED',
+    'CONCUBINE': 'MATE',
+    'PARAMOUR': 'PARAMOUR',
+};
+
+interface Partnership {
+    id: string;
+    name: string;
+    type: PartnershipType
+}
+
+interface Participant {
+    id: string;
+    name: string;
+    role: string;
+}
+
+interface Relationship {
+    id: string;
+    targetCharacterId?: string;
+    targetCharacterName?: string;
+    relationshipType: string;
+    // Partnership context
+    partnershipId?: string;
+    partnershipName?: string;
+    partnershipType?: 1 | 2;
+    // For FACTION: list of other members (members of the faction)
+    // For LIAISON child entries: siblings
+    otherMembers?: Participant[];
+    // For LIAISON child entries: list of parent participants
+    parents?: Participant[];
+}
 
 interface RelationsListEditorProps {
-    characterIDs: CharacterID[];
-    characterId: number;
+    characterId: string;
+    availableCharacters: CharacterID[];
+    onSave?: (relationships: Relationship[]) => void;
 }
 
-interface RelationshipEditorProps {
-    relation: CharacterRelations;
-    characterIDs: CharacterID[];
-    characterId: number;
-    onRelationChange: (field: string, value: string | number | null) => void;
-    unions: CharacterUnions[];
-    factions: { value: number; label: string; }[] | [][];
-    onDelete: () => void;
-}
+export default function RelationsListEditor({
+    characterId,
+    availableCharacters,
+    onSave,
+}: RelationsListEditorProps) {
+    const [relationships, setRelationships] = useState<Relationship[]>([]);
+    const [partnerships, setPartnerships] = useState<Partnership[]>([]);
+    const [myMatePartnerships, setMyMatePartnerships] = useState<{ id: string; label: string }[]>([]);
+    const [newRelation, setNewRelation] = useState<Partial<Relationship>>({});
+    const [loading, setLoading] = useState(false);
 
-const RelationshipEditor: React.FC<RelationshipEditorProps> = ({ relation, unions, factions, characterIDs, onRelationChange, onDelete }) => {
-    const { type = null, target = null, source = null } = relation;
-
-
-    const isParental = type === RelationshipType.Parents;
-    const isSibling = type === RelationshipType.Sibling;
-    const isChild = type === RelationshipType.Child;
-    const isMember = type === RelationshipType.Member;
-    const isPeer = type == RelationshipType.Peer;
-
-    const targetCharacterName = (isSibling || isPeer) ? characterIDs.find(c => c.id === target)?.name : '';
-    const selectedFaction = isMember ? factions.filter(f => f.value === source) : [];
-
-    return (
-        <Row className="align-items-center">
-            <Col>
-                {!isParental && !isSibling && !isChild && !isMember && !isPeer && ( // For standard editable relationships
-                    <div className="flex items-center gap-2">
-                        <Form.Select
-                            style={{ width: 'auto' }}
-                            value={type ?? ''}
-                            onChange={(e: ChangeEvent<HTMLSelectElement>) => onRelationChange('type', e.target.value)}
-                        >
-                            <option value="" disabled>Select Relationship</option>
-                            <option value={RelationshipType.Spouse}>Spouse</option>
-                            <option value={RelationshipType.Concubine}>Concubine</option>
-                            <option value={RelationshipType.Betrothed}>Betrothed</option>
-                            <option value={RelationshipType.Lover}>Lover</option>
-                            <option value={RelationshipType.Parents}>Parents</option>
-                            <option value={RelationshipType.Child}>Child</option>
-                            <option value={RelationshipType.Guardian}>Guardian</option>
-                            <option value={RelationshipType.Ward}>Ward</option>
-                            <option value={RelationshipType.Member}>Member</option>
-                            <option value={RelationshipType.Mentor}>Mentor</option>
-                            <option value={RelationshipType.Liege}>Liege</option>
-                            <option value={RelationshipType.Retainer}>Retainer</option>
-                            <option value={RelationshipType.Patron}>Patron</option>
-                            <option value={RelationshipType.Client}>Client</option>
-                            <option value={RelationshipType.Protégé}>Protégé</option>
-                            <option value={RelationshipType.Employer}>Employer</option>
-                            <option value={RelationshipType.Employee}>Employee</option>
-                            <option value={RelationshipType.Master}>Master</option>
-                            <option value={RelationshipType.Slave}>Slave</option>
-                            <option value={RelationshipType.Friend}>Friend</option>
-                            <option value={RelationshipType.Commander}>Commander</option>
-                            <option value={RelationshipType.Subordinate}>Subordinate</option>
-                        </Form.Select>
-                        <Form.Select
-                            style={{ width: 'auto' }}
-                            value={target ?? ''}
-                            onChange={(e) => onRelationChange('target', e.target.value)}
-                        >
-                            <option value="" disabled hidden>Select a Character</option>
-                            {characterIDs.map((e) => {
-                                return <option value={e.id} key={e.id}> {e.name}</option>
-                            })}
-                        </Form.Select>
-                    </div>
-                )}
-                {isParental && ( // For parental relationships
-                    <div className="flex items-center flex-wrap gap-2">
-                        <Form.Select
-                            style={{ width: 'auto' }}
-                            value={source ?? ''}
-                            onChange={(e: ChangeEvent<HTMLSelectElement>) => onRelationChange('source', e.target.value)}
-                        >
-                            <option value="" disabled>Select a Parent</option>
-                            {unions.map((e) => (
-                                <option value={e.value} key={`partner-${e.value}`}>{e.label}</option>
-                            ))}
-                        </Form.Select>
-                        <span>are the Parents of</span>
-                        <Form.Select
-                            style={{ width: 'auto' }}
-                            value={target ?? ''}
-                            onChange={(e: ChangeEvent<HTMLSelectElement>) => onRelationChange('target', e.target.value)}
-                        >
-                            <option value="" disabled hidden> Select a child</option>
-                            {characterIDs.map((e) => (
-                                <option value={e.id} key={`target-${e.id}`}> {e.name}</option>
-                            ))}
-                        </Form.Select>
-                    </div>
-                )}
-                {isChild && (
-                    <div className="flex items-center flex-wrap gap-2">
-                        <span> is the child of</span>
-                        <Form.Select
-                            style={{ width: 'auto' }}
-                            value={source ?? ''}
-                            onChange={(e: ChangeEvent<HTMLSelectElement>) => onRelationChange('source', e.target.value)}
-                        >
-                            <option value="" disabled>Select a Parent</option>
-                            {unions.map((e) => (
-                                <option value={e.value} key={`partner-${e.value}`}>{e.label}</option>
-                            ))}
-                        </Form.Select>
-                    </div>
-                )}
-                {isSibling && ( // For sibling relationships (static text)
-                    <div className="flex items-center gap-2 p-2">
-                        <span>Sibling: <strong>{targetCharacterName}</strong></span>
-                    </div>
-                )}
-                {isPeer && (
-                    <div className="flex items-center">
-                        <span>Peer: <strong>{targetCharacterName}</strong></span>
-                    </div>
-                )}
-                {isMember && (
-                    <div className="flex items-center flex-wrap gap-2">
-                        <span> Member of </span>
-                        <Typeahead
-                            id="org_combo"
-                            labelKey="label"
-                            options={factions}
-                            defaultSelected={selectedFaction as any[]}
-                            allowNew
-                            clearButton
-                            onChange={(selecte) => { }}
-                        />
-                    </div>
-                )}
-            </Col>
-            {!isSibling && !isPeer && (
-                <Col xs="auto">
-                    <button
-                        type="button"
-                        onClick={onDelete}
-                        className="bg-red-500 text-white px-2 py-1 rounded"
-                    >
-                        -
-                    </button>
-                </Col>
-            )}
-        </Row>
-    )
-}
-
-const expandRelations = (connections: any[], currentCharacterId: number) => {
-    const unions: CharacterUnions[] = [];
-    const relations: CharacterRelations[] = [];
-    const siblingMap = new Map<number, { name: string }>();
-    const peerMap = new Map<number, { name: string }>();
-
-    enum DBValue {
-        LIASON = 1,
-        FACTION = 2,
-        PARENT = 1,
-        CHILD = 2,
-        MEMBER = 3
+    const getRoleOpposite = (role: string): string => {
+        return OPPOSITE_ROLES[role] || role;
     };
 
-    for (const union of connections) {
+    const saveRelationship = async (rel: Relationship) => {
+        try {
+            const charId = String(characterId);
 
-        if (union.type == DBValue.LIASON) {
-            // Liasons (Marriages, etc.)
-            unions.push({ value: union.id, label: union.participants.filter((p: any) => p.role == 1).map((p: any) => p.name).join(' & ') });
-        }
-        // Create editable relations for the current character's partners
-        if (union.type == DBValue.LIASON) {
-            if (union.participants.filter((p: any) => p.role == DBValue.PARENT).some((p: any) => p.id === currentCharacterId)) {
-                for (const participant of union.participants.filter((p: any) => p.role == DBValue.PARENT)) {
-                    if (participant.id !== currentCharacterId) {
-                        let expandedUnion: RelationshipType;
-                        if (union.legitimate && union.is_primary) {
-                            expandedUnion = RelationshipType.Spouse;
-                        }
-                        else if (union.legitimate && !union.is_primary) {
-                            expandedUnion = RelationshipType.Concubine;
-                        }
-                        else { // if (!union.legitimate) or other cases
-                            expandedUnion = RelationshipType.Lover;
-                        }
-                        relations.push({ type: expandedUnion, source: union.id, target: participant.id });
-                    }
+            // --- FACTION-handling ---
+            // Existing faction partnerships should be updated here; if the
+            // incoming relationship has no partnershipId it means it is a
+            // brand‑new grouping and needs to be created later in the "else"
+            // block below.  The previous implementation unconditionally
+            // entered this branch and then `continue`ed when there was no
+            // partnershipId, which skipped creation for new factions such as
+            // LIEGE/PROTEGE roles and free‑form MEMBER groups.
+            if (rel.partnershipType === PartnershipType.FACTION && rel.partnershipId) {
+                const partnershipId = rel.partnershipId;
+
+                // Check if partnership needs to be created (new faction via typeahead)
+                const existsInList = partnerships.some(p => p.id === partnershipId);
+
+                if (!existsInList) {
+                    // Create new partnership with given name (should only
+                    // happen when the user typed a new group name for a MEMBER)
+                    const createResp = await PartnershipService.createPartnership({
+                        name: rel.partnershipName,
+                        type: PartnershipType.FACTION,
+                    });
+                    const newPartnershipId = createResp.data.id;
+
+                    // Add current character as MEMBER
+                    await PartnershipService.addPartnerToPartnership(newPartnershipId, {
+                        character_id: charId,
+                        role_code: 'MEMBER',
+                    });
+                } else {
+                    // Add to existing partnership
+                    await PartnershipService.addPartnerToPartnership(partnershipId, {
+                        character_id: charId,
+                        role_code: rel.relationshipType,
+                    });
                 }
-            }
-
-            // Create editable relations for children of this union
-            for (const child of union.participants.filter((p: any) => p.role == DBValue.CHILD)) {
-                relations.push({ type: RelationshipType.Parents, source: union.id, target: child.id });
-            }
-
-            // Find siblings of the current character
-            const isCurrentCharChild = union.participants.filter((p: any) => p.role == DBValue.CHILD).some((c: any) => c.id === currentCharacterId);
-            if (isCurrentCharChild) {
-                for (const sibling of union.participants.filter((p: any) => p.role == DBValue.CHILD)) {
-                    if (sibling.id !== currentCharacterId && !siblingMap.has(sibling.id)) {
-                        siblingMap.set(sibling.id, { name: sibling.name });
-                    }
+            } else if (rel.relationshipType === 'PARENT') {
+                // PARENT case - partnership exists, add child
+                const partnershipId = rel.partnershipId;
+                if (rel.targetCharacterId) {
+                    await PartnershipService.addPartnerToPartnership(partnershipId, {
+                        character_id: rel.targetCharacterId,
+                        role_code: 'CHILD',
+                    });
                 }
+            } else if (['MATE', 'CONCUBINE', 'PARAMOUR'].includes(rel.relationshipType)) {
+                // Romantic/liaison relationships: create LIAISON partnership
+                const createResp = await PartnershipService.createPartnership({
+                    name: null,
+                    type: PartnershipType.LIAISON,
+                });
+                const newPartnershipId = createResp.data.id;
+
+                // Add both partners in a single call to match backend API
+                const oppositeRole = getRoleOpposite(rel.relationshipType);
+                await PartnershipService.addPartnerToPartnership(newPartnershipId, [
+                    { character_id: charId, role_code: rel.relationshipType },
+                    { character_id: rel.targetCharacterId, role_code: oppositeRole },
+                ]);
+            } else if (rel.partnershipType === PartnershipType.FACTION) {
+                // New unnamed faction for a non‑MEMBER role (LIEGE, PROTEGE,
+                // FRIEND, etc.) or a user‑entered MEMBER group without an
+                // existing partnership id.  We create a new faction and then
+                // add both participants (if there is a target character).
+                const createResp = await PartnershipService.createPartnership({
+                    name: rel.partnershipName || null,
+                    type: PartnershipType.FACTION,
+                });
+                const newPartnershipId = createResp.data.id;
+
+                const partners: any[] = [
+                    { character_id: charId, role_code: rel.relationshipType },
+                ];
+                if (rel.targetCharacterId) {
+                    const oppositeRole = getRoleOpposite(rel.relationshipType);
+                    partners.push({ character_id: rel.targetCharacterId, role_code: oppositeRole });
+                }
+
+                await PartnershipService.addPartnerToPartnership(newPartnershipId, partners);
             }
-        } else {
-            // Faction
-            relations.push({ type: RelationshipType.Member, source: union.id, target: currentCharacterId })
-            for (const peer of union.participants.filter((p: any) => p.id !== currentCharacterId)) {
-                peerMap.set(peer.id, { name: peer.name })
-            }
+
+            // Reload relationships to reflect changes
+            const updated = await loadRelationships();
+
+            // Call the optional callback with the fresh data
+            onSave?.(updated);
+        } catch (error) {
+            console.error('Failed to save relationship:', error);
         }
-
-
-    }
-
-    // Add all unique siblings as non-editable relations
-    siblingMap.forEach((_sibling, id) => {
-        relations.push({ type: RelationshipType.Sibling, source: 0, target: id });
-    });
-
-    peerMap.forEach((_peer, id) => {
-        relations.push({ type: RelationshipType.Peer, source: 0, target: id });
-    });
-
-    return { unions, relations };
-};
-
-const winnowFactions = (Rawfactions: any[]) => {
-    const factions = []
-    for (const faction of Rawfactions) {
-        factions.push({ value: faction.id, label: faction.name });
-    }
-    return { factions };
-};
-
-
-const RelationsListEditor: React.FC<RelationsListEditorProps> = ({ characterIDs, characterId }) => {
-    // Handle change of a single relation
-    const [internalRelations, setInternalRelations] = useState<CharacterRelations[]>([]);
-    const [internalUnions, setInternalUnions] = useState<CharacterUnions[]>([]);
-    const [error, setError] = useState<string | null>(null);
-    const [showErrorModal, setShowErrorModal] = useState(false);
-    const [internalFactions, setInternalFactions] = useState<[]>([]);
-
-
-    const fetchData = () => {
-        if (!characterId) return;
-
-        Promise.all([
-            CharacterDataService.getCharacterConnections(characterId, 0),
-            PartnershipService.getNamedFactions()
-        ]).then(([connResponse, factionResponse]) => {
-            const { unions, relations: expandedRelations } = expandRelations(connResponse.data || [], characterId);
-            const { factions } = winnowFactions(factionResponse.data);
-            setInternalUnions(unions);
-            setInternalRelations(expandedRelations);
-            setInternalFactions(factions);
-        }).catch(e => {
-            console.error(e);
-            setError("Failed to refresh character connections.");
-            setShowErrorModal(true);
-        });
     };
 
     useEffect(() => {
-        fetchData();
+        loadRelationships();
+        loadPartnerships();
     }, [characterId]);
 
-    const handleRelationChange = (index: number, field: string, value: string | number | null) => {
-        // Parse the string value from the select input into a number or null
-        const numericValue = typeof value === 'string' ? (value === '' ? null : parseInt(value, 10)) : value;
+    const loadRelationships = async (): Promise<Relationship[]> => {
+        try {
+            setLoading(true);
+            const response = await CharacterDataService.getCharacterConnections(characterId, 0);
 
-        const updated = [...internalRelations];
-        const newRelation: CharacterRelations = { ...updated[index], [field]: numericValue };
+            // Transform partnerships with participants into relationships
+            const allRelationships: Relationship[] = [];
+            const charId = String(characterId); // Ensure characterId is a string for comparison
+            // compute unions where current character is a mate (for parent selection)
+            const unions: { id: string; label: string }[] = (response.data || [])
+                .filter((p: any) => p.type === 1 && p.participants?.some((x: any) => String(x.id) === charId && x.role === 'MATE'))
+                .map((p: any) => {
+                    const mates = p.participants
+                        .filter((x: any) => x.role === 'MATE')
+                        .map((x: any) => x.name)
+                        .join(' and ');
+                    return { id: String(p.id), label: mates };
+                });
+            setMyMatePartnerships(unions);
 
-        // If the type is changed to 'Parents', reset the other fields
-        if (field === 'type' && numericValue === RelationshipType.Parents) {
-            newRelation.source = null;
-            newRelation.target = null;
-        }
-
-        // If the relation is 'Child', the target is always the current character
-        if (newRelation.type === RelationshipType.Child) {
-            newRelation.target = characterId;
-        }
-
-
-        updated[index] = newRelation;
-        setInternalRelations(updated);
-
-        // -- API CALL TO UPDATE UNION
-        if ([1, 2, 5].includes(newRelation.type as number) && newRelation.source !== null && newRelation.target !== null) {
-            const payload = {
-                type: 1,
-                legitimate: (newRelation.type == 1 || newRelation.type == 2) ? true : false,
-                is_primary: newRelation.type === 1,
-            };
-
-            PartnershipService.updatePartnership(newRelation.source, payload)
-                .then(() => {
-                    fetchData(); // Refresh data
-                })
-                .catch(e => {
-                    console.error("Failed to update partnership", e);
-                    setError("Failed to update partnership.");
-                    setShowErrorModal(true);
+            (response.data || []).forEach((partnership: any) => {
+                // helper to normalize role field since API may return `role` or
+                // the newer `role_code` property.
+                const normalize = (p: any) => ({
+                    ...p,
+                    role: p.role || p.role_code,
                 });
 
-        } else if ([1, 2, 5].includes(newRelation.type as number) && newRelation.source === null && newRelation.target !== null) {
-            // --- API CALL FOR NEW MATE -- 
-            const payload = {
-                type: 1,
-                legitimate: (newRelation.type == 1 || newRelation.type == 2) ? true : false,
-                is_primary: newRelation.type === 1,
-            };
+                const myParticipant = partnership.participants
+                    ?.map(normalize)
+                    .find((p: any) => String(p.id) === charId);
 
-            PartnershipService.createPartnership(payload)
-                .then(response => {
-                    const partnershipId = response.data.id;
-                    // Add both the current character and the target character to the new partnership
-                    return Promise.all([
-                        PartnershipService.addPartnerToPartnership(partnershipId, [
-                            { character_id: characterId, role: 1 },
-                            { character_id: newRelation.target as number, role: 1 }
-                        ]),
-                    ]);
-                })
-                .then(() => {
-                    fetchData(); // Refresh data
-                })
-                .catch(e => {
-                    console.error("Failed to create partnership", e);
-                    setError("Failed to create partnership.");
-                    setShowErrorModal(true);
-                });
-        } else if (newRelation.type === RelationshipType.Parents && newRelation.source !== null && newRelation.target !== null) {
-            // --- API call for adding the character as a child to a partnershiop
-            PartnershipService.addPartnerToPartnership(newRelation.source, [{ character_id: newRelation.target, role: 2 }])
-                .then(() => {
-                    fetchData(); // Refresh data
-                })
-                .catch(e => {
-                    console.error("Failed to add partner to partnership", e);
-                    setError("Failed to add partner to partnership.");
-                    setShowErrorModal(true);
-                });
+                if (partnership.type === PartnershipType.LIAISON) {
+                    const myRole = myParticipant?.role;
+                    if (myRole === 'CHILD') {
+                        // aggregate parents and siblings
+                        const parents = partnership.participants
+                            ?.map(normalize)
+                            ?.filter((p: any) => p.role === 'MATE')
+                            ?.map((p: any) => ({ id: String(p.id), name: p.name, role: p.role })) || [];
+                        const siblings = partnership.participants
+                            ?.map(normalize)
+                            ?.filter((p: any) => p.role === 'CHILD' && String(p.id) !== charId)
+                            ?.map((p: any) => ({ id: String(p.id), name: p.name, role: p.role })) || [];
+                        allRelationships.push({
+                            id: `rel_${partnership.id}_parents`,
+                            relationshipType: 'PARENTS',
+                            partnershipId: String(partnership.id),
+                            partnershipName: partnership.name,
+                            partnershipType: 1,
+                            parents,
+                            otherMembers: siblings,
+                        });
+                    } else {
+                        // non-child: list each other participant individually
+                        partnership.participants
+                            ?.map(normalize)
+                            .forEach((participant: any) => {
+                                if (String(participant.id) !== charId) {
+                                    allRelationships.push({
+                                        id: `rel_${partnership.id}_${participant.id}`,
+                                        targetCharacterId: String(participant.id),
+                                        targetCharacterName: participant.name,
+                                        relationshipType: participant.role,
+                                        partnershipId: String(partnership.id),
+                                        partnershipName: partnership.name,
+                                        partnershipType: 1,
+                                    });
+                                }
+                            });
+                    }
+                } else if (partnership.type === PartnershipType.FACTION) {
+                    // FACTION: for named factions, one entry with other members listed
+                    // for unnamed factions, individual entries per member
+                    if (partnership.name) {
+                        // Named faction: one entry for the partnership with other members listed
+                        // We also store the current character id as targetCharacterId so
+                        // that removal logic can distinguish which participant to
+                        // remove without accidentally deleting the entire group.
+                        const otherMembers = partnership.participants
+                            ?.map(normalize)
+                            ?.filter((p: any) => String(p.id) !== charId)
+                            ?.map((p: any) => ({
+                                id: String(p.id),
+                                name: p.name,
+                                role: p.role,
+                            })) || [];
+
+                        allRelationships.push({
+                            id: `rel_${partnership.id}`,
+                            targetCharacterId: charId, // identify ourselves
+                            targetCharacterName: myParticipant?.name,
+                            relationshipType: myParticipant?.role || 'MEMBER',
+                            partnershipId: String(partnership.id),
+                            partnershipName: partnership.name,
+                            partnershipType: 2,
+                            otherMembers,
+                        });
+                    } else {
+                        // Unnamed faction: create individual entries for each other member
+                        partnership.participants
+                            ?.map(normalize)
+                            .forEach((participant: any) => {
+                                if (String(participant.id) !== charId) {
+                                    allRelationships.push({
+                                        id: `rel_${partnership.id}_${participant.id}`,
+                                        targetCharacterId: String(participant.id),
+                                        targetCharacterName: participant.name,
+                                        relationshipType: participant.role,
+                                        partnershipId: String(partnership.id),
+                                        partnershipName: partnership.name,
+                                        partnershipType: 2,
+                                    });
+                                }
+                            });
+                    }
+                }
+            });
+
+            setRelationships(allRelationships);
+            return allRelationships;
+        } catch (error) {
+            console.error('Failed to load relationships:', error);
+            return [];
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleRelationDelete = (index: number) => {
-        const relationToDelete = internalRelations[index];
 
-        if (relationToDelete.source !== null) {
-            PartnershipService.removePartnerFromPartnership(relationToDelete.source, relationToDelete.target)
-                .then(() => {
-                    fetchData(); // Trigger the data refresh
-                })
-                .catch(e => {
-                    console.error("Failed to delete relationship from API", e);
-                    setError("Failed to delete relationship from API.");
-                    setShowErrorModal(true);
-                });
+    const loadPartnerships = async () => {
+        try {
+            // Load all partnerships (both type 1 - LIAISON and type 2 - FACTION)
+            const resp = await PartnershipService.getAllPartnerships();
+            const parts = (resp.data || []).map((p: any) => ({
+                id: String(p.id),
+                name: p.name,
+                type: p.type,
+                participants: p.participants,
+            }));
+            setPartnerships(parts);
+        } catch (err) {
+            console.error('Failed to load partnerships:', err);
+        }
+    };
+
+
+    const handleAddRelationship = async () => {
+        if (!newRelation.relationshipType) return;
+        const relType = newRelation.relationshipType;
+        let relationship: Relationship = {
+            id: `new_${Date.now()}`,
+            relationshipType: relType,
+        } as any;
+
+        if (relType === 'MEMBER') {
+            const existing = partnerships.find(p => p.id === newRelation.partnershipId);
+            if (existing) {
+                relationship.partnershipId = newRelation.partnershipId;
+                relationship.partnershipName = existing.name;
+            } else {
+                // new, free-form grouping name stored in partnershipName
+                relationship.partnershipId = undefined;
+                relationship.partnershipName = (newRelation.partnershipName as string) || (newRelation.partnershipId as string) || '';
+            }
+            relationship.partnershipType = 2;
+            // for consistency with loaded data, mark us as the "target" of this
+            // relation so removal logic can work uniformly later on.
+            relationship.targetCharacterId = characterId;
+            relationship.targetCharacterName = availableCharacters.find(c => c.id === Number(characterId))?.name;
+        } else if (relType === 'PARENT') {
+            // union select stored in partnershipId, child select in targetCharacterId
+            relationship.partnershipId = newRelation.partnershipId;
+            relationship.partnershipName = myMatePartnerships.find(u => u.id === newRelation.partnershipId)?.label;
+            relationship.partnershipType = 1;
+            relationship.targetCharacterId = newRelation.targetCharacterId;
+            relationship.targetCharacterName = availableCharacters.find(c => c.id === Number(newRelation.targetCharacterId))?.name;
         } else {
-            const updated = internalRelations.filter((_, i) => i !== index);
-            setInternalRelations(updated);
+            relationship.targetCharacterId = newRelation.targetCharacterId;
+            relationship.targetCharacterName = availableCharacters.find(c => c.id === Number(newRelation.targetCharacterId))?.name;
+            // MATE, CONCUBINE, PARAMOUR are LIAISON; others are FACTION
+            relationship.partnershipType = ['MATE', 'CONCUBINE', 'PARAMOUR'].includes(relType) ? 1 : 2;
+        }
+
+        // Add to local state
+        setRelationships([...relationships, relationship]);
+        setNewRelation({});
+
+        // Automatically save the new relationship
+        try {
+            setLoading(true);
+            await saveRelationship(relationship);
+        } catch (error) {
+            console.error('Failed to auto-save relationship:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
-    // Add a new relation
-    const handleRelationAdd = () => {
-        const newRelations = [...internalRelations, { type: null, source: null, target: null }];
-        setInternalRelations(newRelations);
+    const handleRemoveRelationship = async (rel: Relationship) => {
+        // remove from local state immediately for responsiveness
+        setRelationships(relationships.filter((r) => r.id !== rel.id));
+
+        // nothing to do for unsaved relationships
+        if (rel.id.startsWith('new_')) {
+            return;
+        }
+
+        try {
+            // decide which API call to make based on partnership type and context
+            if (rel.partnershipType === PartnershipType.LIAISON) {
+                if (rel.relationshipType === 'PARENTS') {
+                    // entire liaison partnership (parents & children) should be removed
+                    await PartnershipService.deletePartnership(rel.partnershipId as string);
+                } else {
+                    // remove only the specific partner from the liaison
+                    if (rel.targetCharacterId) {
+                        await PartnershipService.removePartnerFromPartnership(
+                            rel.partnershipId as string,
+                            rel.targetCharacterId
+                        );
+                    } else {
+                        // fallback: delete whole partnership
+                        await PartnershipService.deletePartnership(rel.partnershipId as string);
+                    }
+                }
+            } else if (rel.partnershipType === PartnershipType.FACTION) {
+                // common case: unnamed faction (no name) -> delete the partnership itself
+                if (!rel.partnershipName) {
+                    await PartnershipService.deletePartnership(rel.partnershipId as string);
+                } else {
+                    // named faction: remove *this* character from the group.  We
+                    // might already have a targetCharacterId (see above) but if
+                    // not fall back to the component prop.
+                    const charToRemove = rel.targetCharacterId || characterId;
+                    await PartnershipService.removePartnerFromPartnership(
+                        rel.partnershipId as string,
+                        charToRemove
+                    );
+                }
+            }
+
+            // note: we don't automatically reload all relationships here to avoid
+            // wiping out any unsaved additions the user may have made.  The list
+            // has already been updated locally above.
+        } catch (error) {
+            console.error('Failed to delete relationship:', error);
+        }
     };
+
+
 
     return (
-        <div className="space-y-2">
-            <ErrorModal
-                show={showErrorModal}
-                onHide={() => setShowErrorModal(false)}
-                error={error}
-            />
-            {internalRelations && internalRelations.length > 0 && (
-                internalRelations.map((relation, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                        <RelationshipEditor
-                            unions={internalUnions}
-                            relation={relation}
-                            factions={internalFactions}
-                            characterIDs={characterIDs}
-                            characterId={characterId}
-                            onDelete={() => handleRelationDelete(index)}
-                            onRelationChange={(field, value) => handleRelationChange(index, field, value)}
-                        />
-                    </div>
-                )))
-            }
-            < button
-                type="button"
-                onClick={handleRelationAdd}
-                className="bg-blue-500 text-white px-3 py-1 rounded"
-            >
-                + Add Relation
-            </button>
+        <Container className="my-4">
 
-            <button
-                type="button"
-                onClick={() => console.log(internalRelations)}
-                className="bg-blue-500 text-white px-3 py-1 rounded"
-            >
-                Log Relations
-            </button>
-        </div >
+            <ListGroup className="mb-4">
+                {relationships.map((rel) => (
+                    <ListGroup.Item key={rel.id}>
+                        <Row className="mb-2">
+                            {rel.partnershipType === PartnershipType.LIAISON ? (
+                                rel.relationshipType === 'PARENTS' ? (
+                                    // child entry showing parents and siblings
+                                    <>
+                                        <Col md={6}>
+                                            <Form.Label>Parents</Form.Label>
+                                            <div className="pt-2">
+                                                {rel.parents?.map((p) => p.name).join(' and ')}
+                                            </div>
+                                        </Col>
+                                        <Col md={6} className="d-flex align-items-start">
+                                            <div>
+                                                {rel.otherMembers && rel.otherMembers.length > 0 && (
+                                                    <>
+                                                        <small className="text-muted">Siblings:</small>
+                                                        <ul className="mb-0 ps-3">
+                                                            {rel.otherMembers.map((sib) => (
+                                                                <li key={sib.id}>{sib.name}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </Col>
+                                        <Col md={12} className="mt-2">
+                                            <Button
+                                                variant="danger"
+                                                size="sm"
+                                                onClick={() => handleRemoveRelationship(rel)}
+                                            >
+                                                Remove
+                                            </Button>
+                                        </Col>
+                                    </>
+                                ) : (
+                                    // default liaison display
+                                    <>
+                                        {rel.relationshipType === 'PARENT' ? (
+                                            // parent-of-child via union
+                                            <>
+                                                <Col md={6}>
+                                                    <div className="pt-2">
+                                                        Parent of <strong>{rel.targetCharacterName}</strong> via <strong>{rel.partnershipName}</strong>
+                                                    </div>
+                                                </Col>
+                                                <Col md={2} className="d-flex align-items-end">
+                                                    <Button
+                                                        variant="danger"
+                                                        size="sm"
+                                                        onClick={() => handleRemoveRelationship(rel)}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                </Col>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Col md={4}>
+                                                    <div className="pt-2">{rel.targetCharacterName}</div>
+                                                </Col>
+                                                <Col md={4}>
+                                                    <div className="pt-2">{rel.relationshipType}</div>
+                                                </Col>
+                                                <Col md={2} className="d-flex align-items-end">
+                                                    <Button
+                                                        variant="danger"
+                                                        size="sm"
+                                                        onClick={() => handleRemoveRelationship(rel)}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                </Col>
+                                            </>
+                                        )}
+                                    </>
+                                )
+                            ) : (
+                                // FACTION: determine if named or unnamed
+                                <>
+                                    {!rel.partnershipName ? (
+                                        // unnamed faction - display like a liaison row
+                                        <>
+                                            <Col md={4}>
+                                                <div className="pt-2">{rel.targetCharacterName}</div>
+                                            </Col>
+                                            <Col md={4}>
+                                                <div className="pt-2">{rel.relationshipType}</div>
+                                            </Col>
+                                            <Col md={2} className="d-flex align-items-end">
+                                                <Button
+                                                    variant="danger"
+                                                    size="sm"
+                                                    onClick={() => handleRemoveRelationship(rel)}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            </Col>
+                                        </>
+                                    ) : (
+                                        // named faction with possibly other members on the side
+                                        <>
+                                            <Col md={6}>
+                                                <div className="pt-2 mb-0">
+                                                    <strong>{rel.relationshipType}</strong> of <strong>{rel.partnershipName}</strong>
+                                                </div>
+                                            </Col>
+                                            <Col md={6} className="d-flex align-items-start">
+                                                <div>
+                                                    {rel.otherMembers && rel.otherMembers.length > 0 && (
+                                                        <>
+                                                            <small className="text-muted">Other members:</small>
+                                                            <ul className="mb-0 ps-3">
+                                                                {rel.otherMembers.map((member) => (
+                                                                    <li key={member.id}>{member.name}</li>
+                                                                ))}
+                                                            </ul>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </Col>
+                                            <Col md={12} className="mt-2">
+                                                <Button
+                                                    variant="danger"
+                                                    size="sm"
+                                                    onClick={() => handleRemoveRelationship(rel)}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            </Col>
+                                        </>
+                                    )}
+                                </>
+                            )}
+                        </Row>
+                    </ListGroup.Item>
+                ))}
+            </ListGroup>
+
+            {/* add new relationship form */}
+            <div className="border-top pt-3 mb-3">
+                <h6>Add New Relationship</h6>
+                <Row className="align-items-end">
+                    <Col md={3}>
+                        <Form.Label>Role</Form.Label>
+                        <Form.Control
+                            as="select"
+                            value={newRelation.relationshipType || ''}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setNewRelation({
+                                    ...newRelation,
+                                    relationshipType: val,
+                                    // reset others
+                                    partnershipId: '',
+                                    targetCharacterId: '',
+                                });
+                            }}
+                        >
+                            <option value="">Select role</option>
+                            {ROLE_CODES.map((code) => (
+                                <option key={code} value={code}>
+                                    {code}
+                                </option>
+                            ))}
+                        </Form.Control>
+                    </Col>
+                    {(newRelation.relationshipType === 'MEMBER') && (
+                        <Col md={4}>
+                            <Form.Label>Partnership</Form.Label>
+                            <Typeahead
+                                id="partnership-typeahead"
+                                // provide a safe labelKey to handle string options or
+                                // custom/new option objects that may not have a
+                                // `name` property.  The runtime error occurred when
+                                // an option lacked a valid label.
+                                labelKey={(option: any) => {
+                                    if (typeof option === 'string') return option;
+                                    if (option && typeof option === 'object') {
+                                        if (option.name != null) return option.name;
+                                        if (option.label != null) return option.label;
+                                    }
+                                    return '';
+                                }}
+                                allowNew
+                                newSelectionPrefix="Create: "
+                                options={partnerships
+                                    .filter(p => p.name && p.name.trim() !== '')
+                                    .map(p => ({ id: p.id, name: p.name }))}
+                                placeholder="Select or type a group..."
+                                selected={(() => {
+                                    if (!newRelation.partnershipId) return [];
+                                    const existing = partnerships.find(p => p.id === newRelation.partnershipId);
+                                    if (existing) return [{ id: existing.id, name: existing.name }];
+                                    // entered free-form name (possibly a plain string)
+                                    return [{ id: newRelation.partnershipId, name: newRelation.partnershipName || newRelation.partnershipId }];
+                                })()}
+                                onChange={(selected: any[]) => {
+                                    if (!selected || selected.length === 0) {
+                                        setNewRelation({ ...newRelation, partnershipId: '', partnershipName: '' });
+                                        return;
+                                    }
+                                    const sel = selected[0] as any;
+                                    if (sel && sel.customOption) {
+                                        // custom/new option: the library sometimes gives us
+                                        // an object with only `label` (e.g. "Create: magi").
+                                        // Avoid storing the whole object as the id/name
+                                        // (that was causing our labelKey to later receive
+                                        // a non-string and trigger the invariant).
+                                        let name: string;
+                                        if (typeof sel === 'string') {
+                                            name = sel;
+                                        } else if (sel.name && typeof sel.name === 'string') {
+                                            name = sel.name;
+                                        } else if (sel.label && typeof sel.label === 'string') {
+                                            // strip the "Create: " prefix if present
+                                            name = sel.label.replace(/^Create:\s*/, '');
+                                        } else {
+                                            // ultimate fallback – convert to string
+                                            name = String(sel);
+                                        }
+                                        setNewRelation({ ...newRelation, partnershipId: name, partnershipName: name });
+                                    } else if (sel && typeof sel === 'object') {
+                                        setNewRelation({ ...newRelation, partnershipId: sel.id, partnershipName: sel.name });
+                                    } else {
+                                        // fallback if the selected value is just a string
+                                        setNewRelation({ ...newRelation, partnershipId: sel, partnershipName: sel });
+                                    }
+                                }}
+                            />
+                        </Col>
+                    )}
+                    {(newRelation.relationshipType === 'PARENT') && (
+                        <>
+                            <Col md={4}>
+                                <Form.Label>Union</Form.Label>
+                                <Form.Control
+                                    as="select"
+                                    value={newRelation.partnershipId || ''}
+                                    onChange={(e) =>
+                                        setNewRelation({ ...newRelation, partnershipId: e.target.value })
+                                    }
+                                >
+                                    <option value="">Select union</option>
+                                    {myMatePartnerships.map((u) => (
+                                        <option key={u.id} value={u.id}>
+                                            {u.label}
+                                        </option>
+                                    ))}
+                                </Form.Control>
+                            </Col>
+                            <Col md={3}>
+                                <Form.Label>Child</Form.Label>
+                                <Form.Control
+                                    as="select"
+                                    value={newRelation.targetCharacterId || ''}
+                                    onChange={(e) =>
+                                        setNewRelation({ ...newRelation, targetCharacterId: e.target.value })
+                                    }
+                                >
+                                    <option value="">Select child</option>
+                                    {availableCharacters.map((c) => (
+                                        <option key={c.id} value={c.id}>
+                                            {c.name}
+                                        </option>
+                                    ))}
+                                </Form.Control>
+                            </Col>
+                        </>
+                    )}
+                    {newRelation.relationshipType && newRelation.relationshipType !== 'MEMBER' && newRelation.relationshipType !== 'PARENT' && (
+                        <Col md={4}>
+                            <Form.Label>Character</Form.Label>
+                            <Form.Control
+                                as="select"
+                                value={newRelation.targetCharacterId || ''}
+                                onChange={(e) =>
+                                    setNewRelation({ ...newRelation, targetCharacterId: e.target.value })
+                                }
+                            >
+                                <option value="">Select character</option>
+                                {availableCharacters.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.name}
+                                    </option>
+                                ))}
+                            </Form.Control>
+                        </Col>
+                    )}
+                    <Col md={2}>
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={handleAddRelationship}
+                            disabled={
+                                !newRelation.relationshipType ||
+                                // member or parent need a partnership/union selected
+                                ((newRelation.relationshipType === 'MEMBER' || newRelation.relationshipType === 'PARENT') && !newRelation.partnershipId) ||
+                                // parent also needs a child selected
+                                (newRelation.relationshipType === 'PARENT' && !newRelation.targetCharacterId) ||
+                                // other roles (not member/parent) need a character
+                                (!['MEMBER', 'PARENT'].includes(newRelation.relationshipType || '') && !newRelation.targetCharacterId)
+                            }
+                        >
+                            Add
+                        </Button>
+                    </Col>
+                </Row>
+            </div>
+        </Container>
     );
-};
-
-export default RelationsListEditor;
-``
+}

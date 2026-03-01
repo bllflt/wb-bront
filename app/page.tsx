@@ -353,8 +353,8 @@ const CharacterList = () => {
                                     <Tab eventKey="key-relations" title="Key Relations" id="keyrelations-tab">
                                         {currentCharacterID && (
                                             <RelationsListEditor
-                                                characterIDs={characterIDs}
                                                 characterId={currentCharacterID}
+                                                availableCharacters={characterIDs.filter(c => c.id !== currentCharacterID)}
                                             />
                                         )}
 

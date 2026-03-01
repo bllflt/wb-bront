@@ -134,7 +134,7 @@ interface FamilyTreeProps {
 
 interface Participant {
   id: number;
-  role: 1 | 2 | 3; // 1 for parent, 2 for child, 3 for member
+  role: 'MATE' | 'CHILD' | 'MEMBER';
   sex: number;
   name: string;
 }
@@ -172,9 +172,9 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick }) => 
         const unionType = union.type === 1 ? 'marriage_unit' : 'faction';
         elements.push({ data: { id: unionNodeId, type: unionType } });
 
-        const parents = union.participants.filter(p => p.role === 1);
-        const children = union.participants.filter(p => p.role === 2);
-        const members = union.participants.filter(p => p.role === 3);
+        const parents = union.participants.filter(p => p.role === 'MATE');
+        const children = union.participants.filter(p => p.role === 'CHILD');
+        const members = union.participants.filter(p => p.role === 'MEMBER');
 
         // Add parent nodes and connect them to the union node.
         parents.forEach(parent => {

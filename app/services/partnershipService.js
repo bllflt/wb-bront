@@ -15,14 +15,21 @@ const PartnershipService = {
 
     updatePartnership: (id, data) => api.put(`/partnerships/${id}`, data),
 
+    deletePartnership: (id) => api.delete(`/partnerships/${id}`),
+
     getPartnersForPartnership: (partnershipId) =>
-        api.get(`/partnerships/${partnershipId}/partners`),
+        api.get(`/partnerships/${partnershipId}/participants`),
 
     getPartnerById: (partnershipId, partnerId) =>
         api.get(`/partnerships/${partnershipId}/participants/${partnerId}`),
 
-    addPartnerToPartnership: (partnershipId, partnerData) =>
-        api.post(`/partnerships/${partnershipId}/participants`, partnerData),
+    // The backend now expects an array of participants when adding.
+    // Wrap single objects for backward compatibility so callers can pass
+    // either a single partner object or an array.
+    addPartnerToPartnership: (partnershipId, partnerData) => {
+        const payload = Array.isArray(partnerData) ? partnerData : [partnerData];
+        return api.post(`/partnerships/${partnershipId}/participants`, payload);
+    },
 
     updatePartnerInPartnership: (partnershipId, partnerId, partnerData) =>
         api.put(`/partnerships/${partnershipId}/participants/${partnerId}`, partnerData),
