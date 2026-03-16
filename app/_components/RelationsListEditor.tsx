@@ -703,40 +703,40 @@ export default function RelationsListEditor({
                             </Col>
                             <Col md={3}>
                                 <Form.Label>Child</Form.Label>
-                                <Form.Control
-                                    as="select"
-                                    value={newRelation.targetCharacterId || ''}
-                                    onChange={(e) =>
-                                        setNewRelation({ ...newRelation, targetCharacterId: e.target.value })
-                                    }
-                                >
-                                    <option value="">Select child</option>
-                                    {availableCharacters.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.name}
-                                        </option>
-                                    ))}
-                                </Form.Control>
+                                <Typeahead
+                                    id="child-typeahead"
+                                    labelKey="name"
+                                    options={availableCharacters}
+                                    placeholder="Select child"
+                                    selected={newRelation.targetCharacterId ? availableCharacters.filter(c => c.id === Number(newRelation.targetCharacterId)) : []}
+                                    onChange={(selected: any[]) => {
+                                        if (selected.length > 0) {
+                                            setNewRelation({ ...newRelation, targetCharacterId: String(selected[0].id) });
+                                        } else {
+                                            setNewRelation({ ...newRelation, targetCharacterId: '' });
+                                        }
+                                    }}
+                                />
                             </Col>
                         </>
                     )}
                     {newRelation.relationshipType && newRelation.relationshipType !== 'MEMBER' && newRelation.relationshipType !== 'PARENT' && (
                         <Col md={4}>
                             <Form.Label>Character</Form.Label>
-                            <Form.Control
-                                as="select"
-                                value={newRelation.targetCharacterId || ''}
-                                onChange={(e) =>
-                                    setNewRelation({ ...newRelation, targetCharacterId: e.target.value })
-                                }
-                            >
-                                <option value="">Select character</option>
-                                {availableCharacters.map((c) => (
-                                    <option key={c.id} value={c.id}>
-                                        {c.name}
-                                    </option>
-                                ))}
-                            </Form.Control>
+                            <Typeahead
+                                id="character-typeahead"
+                                labelKey="name"
+                                options={availableCharacters}
+                                placeholder="Select character"
+                                selected={newRelation.targetCharacterId ? availableCharacters.filter(c => c.id === Number(newRelation.targetCharacterId)) : []}
+                                onChange={(selected: any[]) => {
+                                    if (selected.length > 0) {
+                                        setNewRelation({ ...newRelation, targetCharacterId: String(selected[0].id) });
+                                    } else {
+                                        setNewRelation({ ...newRelation, targetCharacterId: '' });
+                                    }
+                                }}
+                            />
                         </Col>
                     )}
                     <Col md={2}>
