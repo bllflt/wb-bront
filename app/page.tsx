@@ -68,6 +68,7 @@ const CharacterList = () => {
         images: [],
         appearance: '',
     });
+    const [relationsVersion, setRelationsVersion] = useState(0);
 
     useEffect(() => {
         retrieveCharacterIDs();
@@ -276,6 +277,7 @@ const CharacterList = () => {
                                     <FamilyTree
                                         characterId={currentCharacterID}
                                         onNodeClick={handleCharacterChange}
+                                        refreshTrigger={relationsVersion}
                                     />
                                 )}
                             </div>
@@ -355,6 +357,7 @@ const CharacterList = () => {
                                             <RelationsListEditor
                                                 characterId={currentCharacterID}
                                                 availableCharacters={characterIDs.filter(c => c.id !== currentCharacterID)}
+                                                onSave={() => setRelationsVersion(prev => prev + 1)}
                                             />
                                         )}
 
