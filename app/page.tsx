@@ -12,6 +12,7 @@ import Row from "react-bootstrap/Row";
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
 import AttributeListEditor from "./_components/AttributeListEditor";
+import MarkdownEditor from './MarkdownEditor';
 import ChatModal from './_components/ChatModal';
 import ErrorModal from './_components/ErrorModal';
 import FamilyTree from './_components/FamilyTree';
@@ -19,8 +20,7 @@ import ImageGrid from './_components/ImageGrid';
 import { CDProps, ReconcileDescriptionModal } from "./_components/ReconcileDescription";
 import RelationsListEditor from "./_components/RelationsListEditor";
 import CharacterDataService from "./services/CharacterService";
-import { CharacterDataWithoutID, CharacterID, CharacterRelations } from './types';
-
+import { CharacterDataWithoutID, CharacterID } from './types';
 
 export type CharacterImage = string;
 
@@ -268,7 +268,11 @@ const CharacterList = () => {
                             {/* Images section */}
                             <div className="max-h-[400px] p-2 flex flex-col items-center">
                                 {characterState.images && (
-                                    <ImageGrid images={characterState.images} dispatch={dispatch} />
+                                    <ImageGrid
+                                        images={characterState.images}
+                                        dispatch={dispatch}
+                                        characterId={currentCharacterID}
+                                    />
                                 )}
                             </div>
                             {/* Family Tree section */}
@@ -342,15 +346,15 @@ const CharacterList = () => {
 
                                 <Tabs defaultActiveKey="background" id="character-details-tabs" fill>
                                     <Tab eventKey="background" title="Background">
-                                        <Form.Control
-                                            as="textarea"
-                                            name="background"
-                                            value={currentCharacter.background || ''}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter background"
-                                            rows={14}
-                                            className="mt-2"
-                                        />
+                                        <div className="mt-2 bg-white rounded">
+                                            <MarkdownEditor
+                                                key={currentCharacterID}
+                                                value={currentCharacter.background || ''}
+                                                onChange={(val) => {
+                                                    setCurrentCharacter(prev => prev ? ({ ...prev, background: val }) : null)
+                                                }}
+                                            />
+                                        </div>
                                     </Tab>
                                     <Tab eventKey="key-relations" title="Key Relations" id="keyrelations-tab">
                                         {currentCharacterID && (
