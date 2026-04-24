@@ -23,6 +23,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     const handleSelect = (selectedIndex: number) => {
         setActiveIndex(selectedIndex);
@@ -65,6 +66,29 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
             console.error('Error during upload:', error);
         } finally {
             setIsUploading(false);
+        }
+    };
+
+    const handleGenerate = async () => {
+        if (!characterId || isGenerating) return;
+
+        setIsGenerating(true);
+        try {
+            const response = await fetch(`http://127.0.0.1:5000/characters/generate-image`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ character_id: characterId.toString() })
+            })
+            if (!response.ok) {
+                console.error('Failed to trigger image generation');
+            }
+        }
+        catch (error) {
+            console.error('Error during generation:', error);
+        } finally {
+            setIsGenerating(false);
         }
     };
 
@@ -113,8 +137,12 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
                             disabled={images.length === 0}
                         >Check</Button>
                         <Button onClick={() => setShowUploadModal(true)}>Upload</Button>
-                        <Button>Generate</Button>
-
+                        <Button
+                            onClick={handleGenerate}
+                            disabled={!characterId || isGenerating}
+                        >
+                            {isGenerating ? 'Generating...' : 'Generate'}
+                        </Button>
                     </ButtonGroup>
                 </Col>
             </Row>
