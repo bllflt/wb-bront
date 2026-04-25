@@ -190,6 +190,14 @@ const CharacterList = () => {
 
     return (
         <div>
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                /* Fix for double "X" in Bootstrap 5 */
+                .rbt-close-content {
+                    display: none;
+                }
+                `
+            }} />
             <ChatModal show={showChatModal} onHide={() => setShowChatModal(false)} />
 
             <ErrorModal
