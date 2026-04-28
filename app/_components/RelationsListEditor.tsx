@@ -202,10 +202,10 @@ export default function RelationsListEditor({
             const charId = String(characterId); // Ensure characterId is a string for comparison
             // compute unions where current character is a mate (for parent selection)
             const unions: { id: string; label: string }[] = (response.data || [])
-                .filter((p: any) => p.type === 1 && p.participants?.some((x: any) => String(x.id) === charId && x.role === 'MATE'))
+                .filter((p: any) => p.type === 1 && p.participants?.some((x: any) => String(x.id) === charId && ['MATE', 'CONCUBINE', 'PARAMOUR'].includes(x.role)))
                 .map((p: any) => {
                     const mates = p.participants
-                        .filter((x: any) => x.role === 'MATE')
+                        .filter((x: any) => ['MATE', 'CONCUBINE', 'PARAMOUR'].includes(x.role))
                         .map((x: any) => x.name)
                         .join(' and ');
                     return { id: String(p.id), label: mates };
@@ -230,7 +230,7 @@ export default function RelationsListEditor({
                         // aggregate parents and siblings
                         const parents = partnership.participants
                             ?.map(normalize)
-                            ?.filter((p: any) => p.role === 'MATE')
+                            ?.filter((p: any) => ['MATE', 'CONCUBINE', 'PARAMOUR'].includes(p.role))
                             ?.map((p: any) => ({ id: String(p.id), name: p.name, role: p.role })) || [];
                         const siblings = partnership.participants
                             ?.map(normalize)
