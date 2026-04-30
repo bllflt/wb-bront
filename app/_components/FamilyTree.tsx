@@ -13,7 +13,7 @@ const layoutOptions: cytoscapeFcose.FcoseLayoutOptions = {
   // Function for ideal edge length
   idealEdgeLength: edge => {
     switch (edge.data('type')) {
-      case 'spouse': return 30;
+      case 'spouse': return 15;
       case 'parent_child': return 120;
       case 'relationship': return 60;
       default: return 80;
@@ -149,7 +149,7 @@ const styleSheet: cytoscape.StylesheetJsonBlock[] = [{
 {
   selector: 'edge[type = "org_member"]',
   style: {
-    'curve-style': 'straight',
+    'curve-style': 'haystack',
     'line-color': '#ccc', // Gray
     'target-arrow-shape': 'none',
     'width': 2,
@@ -158,7 +158,7 @@ const styleSheet: cytoscape.StylesheetJsonBlock[] = [{
 {
   selector: 'edge[type = "relationship"]',
   style: {
-    'curve-style': 'straight',
+    'curve-style': 'haystack',
     'line-color': '#00FF00', // Green
     'target-arrow-shape': 'none',
     'width': 2,

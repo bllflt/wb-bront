@@ -61,8 +61,8 @@ const CharacterList = () => {
     const [isTyping, setIsTyping] = useState(false)
     const [error, setError] = useState<string | null>(null);
     const [showErrorModal, setShowErrorModal] = useState(false);
-    const [eventMessage, setEventMessage] = useState<CDProps | null>(null);
-    const [showEventModal, setShowEventModal] = useState(false);
+    const [eventReconcileMessage, setReconcileEventMessage] = useState<CDProps | null>(null);
+    const [showReconcileEventModal, setReconcileShowEventModal] = useState(false);
     const [showChatModal, setShowChatModal] = useState(false);
     const [characterState, dispatch] = useReducer(characterReducer, {
         images: [],
@@ -86,10 +86,17 @@ const CharacterList = () => {
         if (charIdFromUrl) {
             const evtSource = new EventSource(`http://127.0.0.1:5000/api/v1/events/character/${charIdFromUrl}/`);
             evtSource.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data) {
-                    setEventMessage(data);
-                    setShowEventModal(true);
+                const data = JSON.parse(JSON.parse(event.data));
+                switch (data.topic) {
+                    case 'reconcile':
+                        setReconcileEventMessage(data);
+                        setReconcileShowEventModal(true);
+                        break;
+                    case 'image':
+                        if (characterState && !characterState.images.includes(data.filename)) {
+                            dispatch({ type: 'ADD_IMAGE', payload: data.filename });
+                        }
+                        break;
                 }
             };
 
@@ -206,9 +213,9 @@ const CharacterList = () => {
                 error={error}
             />
             <ReconcileDescriptionModal
-                show={showEventModal}
-                onHide={() => setShowEventModal(false)}
-                data={eventMessage}
+                show={showReconcileEventModal}
+                onHide={() => setReconcileShowEventModal(false)}
+                data={eventReconcileMessage}
                 dispatch={dispatch}
             />
             <Form>
