@@ -25,10 +25,20 @@ export default function ChatModal({ show, onHide }: Props) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    // Clear history when modal closes
+    // Load history when modal opens
     useEffect(() => {
-        if (!show) {
-            setMessages([]);
+        if (show) {
+            const fetchHistory = async () => {
+                try {
+                    const res = await ChatService.getHistory();
+                    setMessages(res || []);
+                } catch (e) {
+                    console.error('Failed to fetch chat history:', e);
+                    setError('Failed to load chat history.');
+                }
+            };
+            fetchHistory();
+        } else {
             setInput('');
             setError(null);
         }
