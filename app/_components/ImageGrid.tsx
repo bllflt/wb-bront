@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent, FormEvent } from 'react';
+import React, { useEffect, useState, ChangeEvent, FormEvent } from 'react';
 import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Carousel from 'react-bootstrap/Carousel';
@@ -28,6 +28,15 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
     const handleSelect = (selectedIndex: number) => {
         setActiveIndex(selectedIndex);
     };
+
+    // Keep the carousel index valid when the image list changes.
+    useEffect(() => {
+        if (images.length === 0) {
+            setActiveIndex(0);
+        } else if (activeIndex >= images.length) {
+            setActiveIndex(images.length - 1);
+        }
+    }, [images, activeIndex]);
 
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -97,6 +106,8 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
             <Row>
                 <Col>
                     <Carousel activeIndex={activeIndex} onSelect={handleSelect}
+                        controls={true}
+                        variant={"dark"}
                         wrap={false}
                         slide={false}
                         interval={null}>

@@ -22,7 +22,7 @@ export default function ChatModal({ show, onHide }: Props) {
 
     // Auto-scroll to bottom
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
     }, [messages]);
 
     // Load history when modal opens

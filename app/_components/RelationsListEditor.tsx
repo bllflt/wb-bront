@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -8,6 +7,7 @@ import "react-bootstrap-typeahead/css/Typeahead.css";
 import PartnershipService from "../services/partnershipService.js";
 import CharacterDataService from "../services/CharacterService.js";
 import { CharacterID } from '../types.js';
+import Link from 'next/link.js';
 
 // Supported role codes (matching OpenAPI) plus a UI-only 'PARENT'
 const ROLE_CODES = [
@@ -458,7 +458,12 @@ export default function RelationsListEditor({
                                         <Col md={6}>
                                             <Form.Label>Parents</Form.Label>
                                             <div className="pt-2">
-                                                {rel.parents?.map((p) => p.name).join(' and ')}
+                                                {rel.parents?.map((p, idx) => (
+                                                    <span key={p.id}>
+                                                        <Link href={`/?characterId=${p.id}`}>{p.name}</Link>
+                                                        {idx < (rel.parents?.length || 0) - 1 ? ' and ' : ''}
+                                                    </span>
+                                                ))}
                                             </div>
                                         </Col>
                                         <Col md={6} className="d-flex align-items-start">
@@ -468,7 +473,7 @@ export default function RelationsListEditor({
                                                         <small className="text-muted">Siblings:</small>
                                                         <ul className="mb-0 ps-3">
                                                             {rel.otherMembers.map((sib) => (
-                                                                <li key={sib.id}>{sib.name}</li>
+                                                                <li key={sib.id}><Link href={`/?characterId=${sib.id}`}>{sib.name}</Link></li>
                                                             ))}
                                                         </ul>
                                                     </>
@@ -509,7 +514,7 @@ export default function RelationsListEditor({
                                         ) : (
                                             <>
                                                 <Col md={4}>
-                                                    <div className="pt-2">{rel.targetCharacterName}</div>
+                                                    <div className="pt-2"><Link href={`/?characterId=${rel.targetCharacterId}`}>{rel.targetCharacterName}</Link></div>
                                                 </Col>
                                                 <Col md={4}>
                                                     <div className="pt-2">{rel.relationshipType}</div>
@@ -534,7 +539,7 @@ export default function RelationsListEditor({
                                         // unnamed faction - display like a liaison row
                                         <>
                                             <Col md={4}>
-                                                <div className="pt-2">{rel.targetCharacterName}</div>
+                                                <div className="pt-2"><Link href={`/?characterId=${rel.targetCharacterId}`}>{rel.targetCharacterName}</Link></div>
                                             </Col>
                                             <Col md={4}>
                                                 <div className="pt-2">{rel.relationshipType}</div>
@@ -564,7 +569,7 @@ export default function RelationsListEditor({
                                                             <small className="text-muted">Other members:</small>
                                                             <ul className="mb-0 ps-3">
                                                                 {rel.otherMembers.map((member) => (
-                                                                    <li key={member.id}>{member.name}</li>
+                                                                    <li key={member.id}><Link href={`/?characterId=${member.id}`}>{member.name}</Link></li>
                                                                 ))}
                                                             </ul>
                                                         </>

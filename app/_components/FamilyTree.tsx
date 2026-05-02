@@ -340,7 +340,6 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick, refre
         const targetNode = cy.getElementById(characterId.toString());
         if (targetNode.length > 0) {
           cy.center(targetNode);
-          cy.maxZoom(1.0);
           cy.minZoom(0.3);
           cy.zoom(0.5);
         } else {
