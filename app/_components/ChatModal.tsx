@@ -7,6 +7,7 @@ import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Spinner from 'react-bootstrap/Spinner';
 import ChatService, { ChatMessage } from '../_lib/ChatService';
+import Markdown from 'react-markdown';
 
 type Props = {
     show: boolean;
@@ -126,7 +127,11 @@ export default function ChatModal({ show, onHide }: Props) {
                                             <div className="text-xs opacity-75 mb-1 font-semibold">
                                                 {m.role === 'user' ? 'You' : 'Assistant'}
                                             </div>
-                                            <div className="text-sm">{m.content}</div>
+                                            <div className="text-sm">
+                                                <Markdown>
+                                                    {m.content}
+                                                </Markdown>
+                                            </div>
                                             {m.created_at && (
                                                 <div className="text-xs opacity-50 mt-1">
                                                     {new Date(m.created_at).toLocaleTimeString()}

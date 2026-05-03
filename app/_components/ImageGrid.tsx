@@ -64,7 +64,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
                 const data = await response.json();
                 // Assuming backend returns { filename: "..." }
                 if (data.filename) {
-                    dispatch({ type: 'ADD_IMAGE', payload: data.filename });
+                    // dispatch({ type: 'ADD_IMAGE', payload: data.filename });
                 }
                 setShowUploadModal(false);
                 setSelectedFile(null);
