@@ -55,7 +55,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
 
         try {
             // Adjust the URL endpoint based on your backend API structure
-            const response = await fetch(`http://127.0.0.1:5000/characters/upload-image`, {
+            const response = await fetch(`http://localhost:2000/characters/upload-image`, {
                 method: 'POST',
                 body: formData,
             });
@@ -83,7 +83,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
 
         setIsGenerating(true);
         try {
-            const response = await fetch(`http://127.0.0.1:5000/characters/generate-image`, {
+            const response = await fetch(`http://localhost:2000/characters/generate-image`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -114,7 +114,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
                         {images.map((img: CharacterImage) => (
                             <Carousel.Item key={img}>
                                 <Image
-                                    src={`http://127.0.0.1:5000/images/`.concat(img)}
+                                    src={`http://localhost:2000/images/`.concat(img)}
                                     thumbnail={true}
                                     style={{
                                         maxHeight: '380px',

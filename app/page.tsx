@@ -84,7 +84,7 @@ const CharacterList = () => {
     useEffect(() => {
         const charIdFromUrl = searchParams.get('characterId');
         if (charIdFromUrl) {
-            const evtSource = new EventSource(`http://127.0.0.1:5000/api/v1/events/character/${charIdFromUrl}/`);
+            const evtSource = new EventSource(`${process.env.NEXT_PUBLIC_API_URL}/events/character/${charIdFromUrl}/`);
             evtSource.onmessage = (event) => {
                 const data = JSON.parse(JSON.parse(event.data));
                 switch (data.topic) {
