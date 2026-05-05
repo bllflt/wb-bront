@@ -4,24 +4,24 @@ import api from './api';
 
 const PartnershipService = {
 
-    getAllPartnerships: () => api.get('/partnerships'),
+    getAllPartnerships: () => api.get('partnerships'),
 
-    getNamedFactions: () => api.get('/partnerships?faction=true'),
+    getNamedFactions: () => api.get('partnerships?faction=true'),
 
 
-    getPartnershipById: (id) => api.get(`/partnerships/${id}`),
+    getPartnershipById: (id) => api.get(`partnerships/${id}`),
 
-    createPartnership: (data) => api.post('/partnerships', data),
+    createPartnership: (data) => api.post('partnerships', data),
 
-    updatePartnership: (id, data) => api.put(`/partnerships/${id}`, data),
+    updatePartnership: (id, data) => api.put(`partnerships/${id}`, data),
 
-    deletePartnership: (id) => api.delete(`/partnerships/${id}`),
+    deletePartnership: (id) => api.delete(`partnerships/${id}`),
 
     getPartnersForPartnership: (partnershipId) =>
-        api.get(`/partnerships/${partnershipId}/participants`),
+        api.get(`partnerships/${partnershipId}/participants`),
 
     getPartnerById: (partnershipId, partnerId) =>
-        api.get(`/partnerships/${partnershipId}/participants/${partnerId}`),
+        api.get(`partnerships/${partnershipId}/participants/${partnerId}`),
 
     // The backend now expects an array of participants when adding.
     // Wrap single objects for backward compatibility so callers can pass

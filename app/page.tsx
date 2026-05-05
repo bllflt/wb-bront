@@ -3,6 +3,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ChangeEvent, useEffect, useReducer, useState } from 'react';
+import { useAuth } from "./_components/AuthContext";
 import { Typeahead } from 'react-bootstrap-typeahead';
 import "react-bootstrap-typeahead/css/Typeahead.css";
 import Button from "react-bootstrap/Button";
@@ -69,8 +70,18 @@ const CharacterList = () => {
         appearance: '',
     });
     const [relationsVersion, setRelationsVersion] = useState(0);
+    const { isAuthenticated, loading, logout } = useAuth();
 
     useEffect(() => {
+        if (!loading && !isAuthenticated) {
+            router.replace('/login');
+            return;
+        }
+
+        if (!isAuthenticated) {
+            return;
+        }
+
         retrieveCharacterIDs();
 
         const charIdFromUrl = searchParams.get('characterId');
@@ -79,9 +90,13 @@ const CharacterList = () => {
                 fetchCharacterData(charIdFromUrl);
             }
         }
-    }, [searchParams]);
+    }, [searchParams, isAuthenticated, loading]);
 
     useEffect(() => {
+        if (!isAuthenticated) {
+            return;
+        }
+
         const charIdFromUrl = searchParams.get('characterId');
         if (charIdFromUrl) {
             const evtSource = new EventSource(`${process.env.NEXT_PUBLIC_API_URL}/events/character/${charIdFromUrl}/`);
@@ -104,7 +119,7 @@ const CharacterList = () => {
                 evtSource.close();
             };
         }
-    }, [searchParams]);
+    }, [searchParams, isAuthenticated]);
 
     const retrieveCharacterIDs = () => {
         CharacterDataService.getAllIDs()
@@ -195,6 +210,14 @@ const CharacterList = () => {
             });
     };
 
+    if (loading) {
+        return <div>Checking authentication...</div>;
+    }
+
+    if (!isAuthenticated) {
+        return <div>Redirecting to login...</div>;
+    }
+
     return (
         <div>
             <style dangerouslySetInnerHTML={{
@@ -270,6 +293,13 @@ const CharacterList = () => {
                             onClick={() => setShowChatModal(true)}
                         >
                             Chat
+                        </Button>
+                        <Button
+                            className="ms-2"
+                            variant="outline-danger"
+                            onClick={logout}
+                        >
+                            Logout
                         </Button>
                     </Col>
                 </Row>

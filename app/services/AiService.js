@@ -1,7 +1,7 @@
 import api from './api';
 
 
-const createWork = data => api.put('/ai/work/caption/request', data);
+const createWork = data => api.put('ai/work/caption/request', data);
 
 
 const AiService = {
