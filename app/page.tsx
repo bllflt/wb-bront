@@ -99,7 +99,7 @@ const CharacterList = () => {
 
         const charIdFromUrl = searchParams.get('characterId');
         if (charIdFromUrl) {
-            const evtSource = new EventSource(`${process.env.NEXT_PUBLIC_API_URL}/events/character/${charIdFromUrl}/`);
+            const evtSource = new EventSource(`${process.env.NEXT_PUBLIC_API_URL}/events/character/${charIdFromUrl}`, { withCredentials: true });
             evtSource.onmessage = (event) => {
                 const data = JSON.parse(JSON.parse(event.data));
                 switch (data.topic) {
