@@ -58,6 +58,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
             const response = await fetch(`http://localhost:2000/characters/upload-image`, {
                 method: 'POST',
                 body: formData,
+                credentials: 'include',
             });
 
             if (response.ok) {
@@ -88,6 +89,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({ character_id: characterId.toString() })
             })
             if (!response.ok) {
