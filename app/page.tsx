@@ -196,6 +196,15 @@ const CharacterList = () => {
             });
     };
 
+    const createOrUpdateCharacter = () => {
+        if (currentCharacterID) {
+            updateCharacter();
+        } else {
+            createCharacter();
+        }
+    };
+
+
     const deleteCharacter = () => {
         CharacterDataService.remove(currentCharacterID)
             .then(response => {
@@ -413,21 +422,18 @@ const CharacterList = () => {
                                     </Tab>
                                 </Tabs>
 
-                                <Button
-                                    variant="primary"
-                                    onClick={createCharacter}>
-                                    Create
-                                </Button>
-                                <Button
-                                    variant="primary"
-                                    onClick={updateCharacter}>
-                                    Update
-                                </Button>
-                                <Button
-                                    variant="danger"
-                                    onClick={deleteCharacter}>
-                                    Delete
-                                </Button>
+                                <div className="flex justify-between mt-2">
+                                    <Button
+                                        variant="primary"
+                                        onClick={createOrUpdateCharacter}>
+                                        Save
+                                    </Button>
+                                    <Button
+                                        variant="danger"
+                                        onClick={deleteCharacter}>
+                                        Delete
+                                    </Button>
+                                </div>
                             </Form>
 
                         </div>
