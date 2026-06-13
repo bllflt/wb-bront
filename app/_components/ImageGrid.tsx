@@ -9,12 +9,12 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Modal from 'react-bootstrap/Modal';
 import Form from 'react-bootstrap/Form';
-import { CharacterAction, CharacterImage } from '../page';
-
+import { CharacterEditorAction } from '../_hooks/useCharacterEditor';
+import { CharacterImage } from '../types';
 
 interface ImageGridProps {
     images: CharacterImage[];
-    dispatch: React.Dispatch<CharacterAction>;
+    dispatch: React.Dispatch<CharacterEditorAction>;
     characterId: number | null;
 }
 

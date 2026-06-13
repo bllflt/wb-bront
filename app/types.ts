@@ -4,15 +4,19 @@ export interface CharacterData {
     sex: number;
     roleplaying: string[];
     background: string;
+    appearance?: string;
+    images?: string[];
 }
 
 export interface CharacterDataWithoutID extends Omit<CharacterData, 'id'> { };
 
-export interface CharacterRelations { 
-    type: number | null; 
-    source: number | null; 
+export interface CharacterRelations {
+    type: number | null;
+    source: number | null;
     target: number | null;
     name: string | null;
 }
 
 export interface CharacterID { id: number; name: string; }
+
+export type CharacterImage = string;

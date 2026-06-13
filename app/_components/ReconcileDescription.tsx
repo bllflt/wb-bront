@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import Form from "react-bootstrap/Form";
-import { CharacterAction } from '../page';
-
+import { CharacterEditorAction } from '../_hooks/useCharacterEditor';
 
 export interface CDProps {
     new_description: string;
@@ -15,7 +14,7 @@ export interface CDProps {
 export interface ReconcileDescriptionModalProps {
     show: boolean;
     onHide: () => void;
-    dispatch: React.Dispatch<CharacterAction>;
+    dispatch: React.Dispatch<CharacterEditorAction>;
     data: CDProps | null;
 };
 
@@ -32,13 +31,12 @@ export const ReconcileDescriptionModal: React.FC<ReconcileDescriptionModalProps>
         }
     }, [show, data]);
     const handleSave = () => {
-        dispatch({ type: 'UPDATE_STRING', payload: ['appearance', newDescription] });
+        dispatch({ type: 'UPDATE_FIELD', payload: { field: 'appearance', value: newDescription } });
         onHide();
     };
     return (
         <Modal show={show} onHide={onHide}>
-            <Modal.Header closeButton>
-            </Modal.Header>
+            <Modal.Header closeButton />
             <Modal.Body>
                 <Form>
                     <Form.Group controlId="new_description">
@@ -47,27 +45,18 @@ export const ReconcileDescriptionModal: React.FC<ReconcileDescriptionModalProps>
                             as="textarea"
                             value={newDescription}
                             onChange={(e) => setNewDescription(e.target.value)}
-                        >
-                        </Form.Control>
+                        />
                     </Form.Group>
                     <Form.Group controlId="explanation">
-                        <Form.Label>
-                            Explanation:
-                        </Form.Label>
+                        <Form.Label>Explanation:</Form.Label>
                         <Form.Control
                             as="textarea"
                             readOnly={true}
                             value={parsedData?.explanation ?? ''}
-                        ></Form.Control>
+                        />
                     </Form.Group>
-                    <Button onClick={handleSave}
-                    >Save</Button>
-
-
-
-
+                    <Button onClick={handleSave}>Save</Button>
                 </Form>
-
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={onHide}>

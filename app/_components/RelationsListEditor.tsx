@@ -73,7 +73,7 @@ interface Relationship {
 }
 
 interface RelationsListEditorProps {
-    characterId: string;
+    characterId: string | number;
     availableCharacters: CharacterID[];
     onSave?: (relationships: Relationship[]) => void;
 }
@@ -360,17 +360,17 @@ export default function RelationsListEditor({
             relationship.partnershipType = 2;
             // for consistency with loaded data, mark us as the "target" of this
             // relation so removal logic can work uniformly later on.
-            relationship.targetCharacterId = characterId;
+            relationship.targetCharacterId = String(characterId);
             relationship.targetCharacterName = availableCharacters.find(c => c.id === Number(characterId))?.name;
         } else if (relType === 'PARENT') {
             // union select stored in partnershipId, child select in targetCharacterId
             relationship.partnershipId = newRelation.partnershipId;
             relationship.partnershipName = myMatePartnerships.find(u => u.id === newRelation.partnershipId)?.label;
             relationship.partnershipType = 1;
-            relationship.targetCharacterId = newRelation.targetCharacterId;
+            relationship.targetCharacterId = String(newRelation.targetCharacterId);
             relationship.targetCharacterName = availableCharacters.find(c => c.id === Number(newRelation.targetCharacterId))?.name;
         } else {
-            relationship.targetCharacterId = newRelation.targetCharacterId;
+            relationship.targetCharacterId = String(newRelation.targetCharacterId);
             relationship.targetCharacterName = availableCharacters.find(c => c.id === Number(newRelation.targetCharacterId))?.name;
             // MATE, CONCUBINE, PARAMOUR are LIAISON; others are FACTION
             relationship.partnershipType = ['MATE', 'CONCUBINE', 'PARAMOUR'].includes(relType) ? 1 : 2;

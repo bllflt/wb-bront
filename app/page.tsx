@@ -1,8 +1,7 @@
 'use client';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ChangeEvent, useEffect, useReducer, useState } from 'react';
+import { ChangeEvent, useEffect, useState } from 'react';
 import { useAuth } from "./_components/AuthContext";
 import { Typeahead } from 'react-bootstrap-typeahead';
 import "react-bootstrap-typeahead/css/Typeahead.css";
@@ -13,68 +12,51 @@ import Row from "react-bootstrap/Row";
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
 import AttributeListEditor from "./_components/AttributeListEditor";
-import MarkdownEditor from './MarkdownEditor';
+import MarkdownEditor from './_components/MarkdownEditor';
 import ChatModal from './_components/ChatModal';
 import ErrorModal from './_components/ErrorModal';
 import FamilyTree from './_components/FamilyTree';
 import ImageGrid from './_components/ImageGrid';
 import { CDProps, ReconcileDescriptionModal } from "./_components/ReconcileDescription";
 import RelationsListEditor from "./_components/RelationsListEditor";
-import CharacterDataService from "./services/CharacterService";
-import { CharacterDataWithoutID, CharacterID } from './types';
-
-export type CharacterImage = string;
-
-interface CharacterState {
-    images: CharacterImage[];
-    appearance: string;
-}
-
-export type CharacterAction =
-    | { type: 'UPDATE_IMAGES'; payload: CharacterImage[] }
-    | { type: 'ADD_IMAGE'; payload: CharacterImage }
-    | { type: 'REMOVE_IMAGE'; payload: CharacterImage }
-    | { type: 'UPDATE_STRING'; payload: [string, string] }
-
-function characterReducer(state: CharacterState, action: CharacterAction): CharacterState {
-    switch (action.type) {
-        case 'UPDATE_IMAGES':
-            return { ...state, images: action.payload };
-        case 'ADD_IMAGE':
-            return { ...state, images: [...state.images, action.payload] };
-        case 'REMOVE_IMAGE':
-            return { ...state, images: state.images.filter(image => image !== action.payload) };
-        case 'UPDATE_STRING':
-            return { ...state, [action.payload[0]]: action.payload[1] };
-        default:
-            return state; // Should not happen with exhaustive type checking, but good practice
-    }
-}
+import { useCharacterEditor } from './_hooks/useCharacterEditor';
+import { useCharacterEvents } from './_hooks/useCharacterEvents';
+import { useCharacterSelection } from './_hooks/useCharacterSelection';
+import { CharacterDataWithoutID } from './types';
 
 const CharacterList = () => {
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
-
-    const [characterIDs, setCharacterIDs] = useState<CharacterID[]>([]);
-    const [currentCharacter, setCurrentCharacter] = useState<CharacterDataWithoutID | null>(null);
-    const [currentCharacterID, setCurrentCharacterID] = useState<number | null>(null);
-    const [isTyping, setIsTyping] = useState(false)
-    const [error, setError] = useState<string | null>(null);
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [eventReconcileMessage, setReconcileEventMessage] = useState<CDProps | null>(null);
     const [showReconcileEventModal, setReconcileShowEventModal] = useState(false);
     const [showChatModal, setShowChatModal] = useState(false);
-    const [characterState, dispatch] = useReducer(characterReducer, {
-        images: [],
-        appearance: '',
-    });
     const [relationsVersion, setRelationsVersion] = useState(0);
     const { isAuthenticated, loading, logout } = useAuth();
 
+    const { characterIDs, selectedCharacterId, handleCharacterChange, refreshCharacterIDs } = useCharacterSelection(isAuthenticated, loading);
+    const {
+        editorState,
+        dispatch,
+        fetchCharacter,
+        saveCharacter,
+        deleteCharacter,
+        updateField,
+        updateArrayField,
+        resetCharacter,
+        setError,
+    } = useCharacterEditor();
+
+    useCharacterEvents({
+        selectedCharacterId: editorState.selectedCharacterId,
+        isAuthenticated,
+        dispatch,
+        onReconcileEvent: (message) => {
+            setReconcileEventMessage(message);
+            setReconcileShowEventModal(true);
+        },
+    });
+
     useEffect(() => {
         if (!loading && !isAuthenticated) {
-            router.replace('/login');
             return;
         }
 
@@ -82,141 +64,50 @@ const CharacterList = () => {
             return;
         }
 
-        retrieveCharacterIDs();
-
-        const charIdFromUrl = searchParams.get('characterId');
-        if (charIdFromUrl) {
-            if (Number(charIdFromUrl) !== currentCharacterID) {
-                fetchCharacterData(charIdFromUrl);
-            }
+        if (selectedCharacterId) {
+            void fetchCharacter(selectedCharacterId);
+        } else {
+            resetCharacter();
         }
-    }, [searchParams, isAuthenticated, loading]);
-
-    useEffect(() => {
-        if (!isAuthenticated) {
-            return;
-        }
-
-        const charIdFromUrl = searchParams.get('characterId');
-        if (charIdFromUrl) {
-            const evtSource = new EventSource(`${process.env.NEXT_PUBLIC_API_URL}/events/character/${charIdFromUrl}`, { withCredentials: true });
-            evtSource.onmessage = (event) => {
-                const data = JSON.parse(JSON.parse(event.data));
-                switch (data.topic) {
-                    case 'reconcile':
-                        setReconcileEventMessage(data);
-                        setReconcileShowEventModal(true);
-                        break;
-                    case 'image':
-                        if (characterState && !characterState.images.includes(data.filename)) {
-                            dispatch({ type: 'ADD_IMAGE', payload: data.filename });
-                        }
-                        break;
-                }
-            };
-
-            return () => {
-                evtSource.close();
-            };
-        }
-    }, [searchParams, isAuthenticated]);
-
-    const retrieveCharacterIDs = () => {
-        CharacterDataService.getAllIDs()
-            .then(response => {
-                setCharacterIDs(response.data);
-            })
-            .catch(e => {
-                console.error(e);
-                setError("BIG WARNING: Could not connect to the backend. Is the dev server running?");
-                setShowErrorModal(true);
-            });
-    }
-
-    const handleCharacterChange = (id: string | null) => {
-        const newUrl = id ? `${pathname}?characterId=${id}` : pathname;
-        router.push(newUrl);
-    };
-
-    const fetchCharacterData = (id: string) => {
-        CharacterDataService.get(id)
-            .then(charResponse => {
-                const { id: charId, images, appearance, ...restOfCharData } = charResponse.data;
-                setCurrentCharacterID(charId);
-                setCurrentCharacter(restOfCharData);
-                dispatch({ type: 'UPDATE_IMAGES', payload: images || [] });
-                dispatch({ type: 'UPDATE_STRING', payload: ['appearance', appearance || ''] });
-            })
-            .catch(e => {
-                console.error(e);
-                setError("Failed to load character data.");
-                setShowErrorModal(true);
-            });
-    }
+    }, [selectedCharacterId, isAuthenticated, loading, fetchCharacter, resetCharacter]);
 
     const handleInputChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
         const { name, value } = event.target;
         const parsedValue = name === 'sex' ? parseInt(value, 10) : value;
-        setCurrentCharacter({ ...currentCharacter, [name]: parsedValue } as CharacterDataWithoutID);
+        updateField(name as keyof CharacterDataWithoutID, parsedValue as string | number);
     };
-
 
     const handleAttributesChange = (newAttributes: string[]) => {
-        setCurrentCharacter({ ...currentCharacter, roleplaying: newAttributes } as CharacterDataWithoutID);
+        updateArrayField('roleplaying', newAttributes);
     };
 
-    const updateCharacter = () => {
-        if (!currentCharacterID || !currentCharacter) return;
-
-        const characterDataWithImages = { ...currentCharacter, images: characterState.images, appearance: characterState.appearance };
-
-        CharacterDataService.update(currentCharacterID, characterDataWithImages)
-            .then(response => { })
-            .catch(e => {
-                console.error(e);
-                setError("Failed to update character.");
-                setShowErrorModal(true);
-            });
-    };
-
-    const createCharacter = () => {
-        CharacterDataService.create(currentCharacter)
-            .then(response => {
-                retrieveCharacterIDs();
-                setCurrentCharacterID(response.data.id);
-                const { id, images, appearance, ...restOfResponseData } = response.data;
-                setCurrentCharacter(restOfResponseData);
-                dispatch({ type: 'UPDATE_IMAGES', payload: images || [] });
-                dispatch({ type: 'UPDATE_STRING', payload: ['appearance', appearance || ''] })
-            })
-            .catch(e => {
-                console.error(e);
-                setError("Failed to create character.");
-                setShowErrorModal(true);
-            });
-    };
-
-    const createOrUpdateCharacter = () => {
-        if (currentCharacterID) {
-            updateCharacter();
-        } else {
-            createCharacter();
+    const handleSave = async () => {
+        try {
+            const savedId = await saveCharacter();
+            if (savedId) {
+                refreshCharacterIDs();
+                handleCharacterChange(savedId.toString());
+            }
+        } catch (error) {
+            setError('Failed to save character.');
+            setShowErrorModal(true);
         }
     };
 
+    const handleDelete = async () => {
+        try {
+            await deleteCharacter();
+            await refreshCharacterIDs();
+            handleCharacterChange(null);
+        } catch (error) {
+            setError('Failed to delete character.');
+            setShowErrorModal(true);
+        }
+    };
 
-    const deleteCharacter = () => {
-        CharacterDataService.remove(currentCharacterID)
-            .then(response => {
-                retrieveCharacterIDs();
-                setCurrentCharacterID(null);
-                setCurrentCharacter(null);
-            })
-            .catch(e => {
-                console.error(e);
-                setError("Failed to delete character.");
-                setShowErrorModal(true);
-            });
+    const handleCreateNew = () => {
+        resetCharacter();
+        handleCharacterChange(null);
     };
 
     if (loading) {
@@ -229,20 +120,12 @@ const CharacterList = () => {
 
     return (
         <div>
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                /* Fix for double "X" in Bootstrap 5 */
-                .rbt-close-content {
-                    display: none;
-                }
-                `
-            }} />
             <ChatModal show={showChatModal} onHide={() => setShowChatModal(false)} />
 
             <ErrorModal
                 show={showErrorModal}
                 onHide={() => setShowErrorModal(false)}
-                error={error}
+                error={editorState.error}
             />
             <ReconcileDescriptionModal
                 show={showReconcileEventModal}
@@ -258,44 +141,26 @@ const CharacterList = () => {
                             placeholder="Choose or type..."
                             labelKey="label"
                             inputProps={{ type: "text" }}
-                            selected=
-                            {isTyping
-                                ? []
-                                : currentCharacterID
-                                    ? [{ id: currentCharacterID, label: currentCharacter?.name || '' }]
-                                    : []}
+                            selected={
+                                editorState.selectedCharacterId && editorState.character
+                                    ? [{ id: editorState.selectedCharacterId.toString(), label: editorState.character.name || '' }]
+                                    : []
+                            }
                             clearButton={true}
-                            onInputChange={() => setIsTyping(true)}
                             onChange={(selected) => {
-                                setIsTyping(false);
-                                const item = selected[0];
+                                const item = selected[0] as { id: string; label: string } | undefined;
                                 if (item) {
-                                    setIsTyping(false);
                                     handleCharacterChange(item.id);
                                 } else {
-                                    setIsTyping(true);
+                                    // User cleared the selection
+                                    handleCharacterChange(null);
                                 }
                             }}
-                            onBlur={() => { setIsTyping(false) }}
-                            options={characterIDs.map(i => {
-                                return { id: i.id, label: i.name }
-                            })}
+                            options={characterIDs.map((i) => ({ id: i.id.toString(), label: i.name }))}
                         />
                     </Col>
                     <Col>
-                        <Button variant="primary"
-                            onClick={() => {
-                                setCurrentCharacterID(null);
-                                setCurrentCharacter({
-                                    roleplaying: [],
-                                    name: "",
-                                    background: "",
-                                    sex: 9,
-                                } as CharacterDataWithoutID);
-                                dispatch({ type: 'UPDATE_IMAGES', payload: [] });
-                                dispatch({ type: 'UPDATE_STRING', payload: ['appearance', ''] });
-                            }}
-                        >+</Button>
+                        <Button variant="primary" onClick={handleCreateNew}>+</Button>
                         <Button
                             className="ms-2"
                             variant="outline-primary"
@@ -315,25 +180,23 @@ const CharacterList = () => {
             </Form>
 
             <div>
-                {currentCharacter ? (
+                {editorState.character ? (
                     <div className="flex flex-row gap-6">
                         {/* Left column */}
                         <div className="w-1/3 flex flex-col gap-4">
                             {/* Images section */}
                             <div className="max-h-[400px] p-2 flex flex-col items-center">
-                                {characterState.images && (
-                                    <ImageGrid
-                                        images={characterState.images}
-                                        dispatch={dispatch}
-                                        characterId={currentCharacterID}
-                                    />
-                                )}
+                                <ImageGrid
+                                    images={editorState.character.images ?? []}
+                                    dispatch={dispatch}
+                                    characterId={editorState.selectedCharacterId}
+                                />
                             </div>
                             {/* Family Tree section */}
                             <div className="h-[400px]">
-                                {currentCharacterID && (
+                                {editorState.selectedCharacterId && (
                                     <FamilyTree
-                                        characterId={currentCharacterID}
+                                        characterId={editorState.selectedCharacterId}
                                         onNodeClick={handleCharacterChange}
                                         refreshTrigger={relationsVersion}
                                     />
@@ -350,7 +213,7 @@ const CharacterList = () => {
                                             <Form.Control
                                                 type="text"
                                                 name="name"
-                                                value={currentCharacter.name}
+                                                value={editorState.character.name}
                                                 onChange={handleInputChange}
                                                 placeholder="Enter name"
                                             />
@@ -362,7 +225,7 @@ const CharacterList = () => {
                                             <Form.Control
                                                 as="select"
                                                 name="sex"
-                                                value={currentCharacter.sex}
+                                                value={editorState.character.sex}
                                                 style={{ width: 'fit-content' }}
                                                 onChange={handleInputChange}
                                             >
@@ -381,9 +244,8 @@ const CharacterList = () => {
                                     <Form.Control
                                         as="textarea"
                                         name="appearance"
-                                        value={characterState.appearance || ''}
-                                        onChange={
-                                            (e) => dispatch({ type: 'UPDATE_STRING', payload: [e.target.name, e.target.value] })}
+                                        value={editorState.character.appearance ?? ''}
+                                        onChange={handleInputChange}
                                         placeholder="Enter appearance"
                                         rows={4}
                                     />
@@ -393,7 +255,7 @@ const CharacterList = () => {
                                 <div>
                                     <label>Attributes:</label>
                                     <AttributeListEditor
-                                        attributes={currentCharacter.roleplaying}
+                                        attributes={editorState.character.roleplaying ?? []}
                                         onChange={handleAttributesChange}
                                     />
                                 </div>
@@ -402,19 +264,17 @@ const CharacterList = () => {
                                     <Tab eventKey="background" title="Background">
                                         <div className="mt-2 bg-white rounded">
                                             <MarkdownEditor
-                                                key={currentCharacterID}
-                                                value={currentCharacter.background || ''}
-                                                onChange={(val) => {
-                                                    setCurrentCharacter(prev => prev ? ({ ...prev, background: val }) : null)
-                                                }}
+                                                key={editorState.selectedCharacterId ?? 'new'}
+                                                value={editorState.character.background ?? ''}
+                                                onChange={(val) => updateField('background', val)}
                                             />
                                         </div>
                                     </Tab>
                                     <Tab eventKey="key-relations" title="Key Relations" id="keyrelations-tab">
-                                        {currentCharacterID && (
+                                        {editorState.selectedCharacterId && (
                                             <RelationsListEditor
-                                                characterId={currentCharacterID}
-                                                availableCharacters={characterIDs.filter(c => c.id !== currentCharacterID)}
+                                                characterId={editorState.selectedCharacterId}
+                                                availableCharacters={characterIDs.filter(c => c.id !== editorState.selectedCharacterId)}
                                                 onSave={() => setRelationsVersion(prev => prev + 1)}
                                             />
                                         )}
@@ -425,12 +285,13 @@ const CharacterList = () => {
                                 <div className="flex justify-between mt-2">
                                     <Button
                                         variant="primary"
-                                        onClick={createOrUpdateCharacter}>
+                                        onClick={handleSave}>
                                         Save
                                     </Button>
                                     <Button
                                         variant="danger"
-                                        onClick={deleteCharacter}>
+                                        onClick={handleDelete}
+                                        disabled={!editorState.selectedCharacterId}>
                                         Delete
                                     </Button>
                                 </div>
