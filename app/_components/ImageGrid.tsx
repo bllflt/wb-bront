@@ -116,7 +116,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
                         {images.map((img: CharacterImage) => (
                             <Carousel.Item key={img}>
                                 <Image
-                                    src={`http://localhost:2000/images/`.concat(img)}
+                                    src={`http://localhost:/images/`.concat(img)}
                                     thumbnail={true}
                                     style={{
                                         maxHeight: '380px',

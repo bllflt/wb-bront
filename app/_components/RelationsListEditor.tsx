@@ -599,7 +599,7 @@ export default function RelationsListEditor({
                 <h6>Add New Relationship</h6>
                 <Row className="align-items-end">
                     <Col md={3}>
-                        <Form.Label>Role</Form.Label>
+                        <Form.Label>Role:</Form.Label>
                         <Form.Control
                             as="select"
                             value={newRelation.relationshipType || ''}

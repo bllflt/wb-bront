@@ -313,7 +313,6 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick, refre
         .then(response => {
           const elements = expander(response.data as Union[]);
           setElements(elements);
-          console.log(elements);
         })
         .catch(e => {
           console.log(e);
