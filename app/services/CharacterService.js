@@ -1,11 +1,11 @@
 import api from "./api";
 
 const getAll = () => {
-  return api.get("characters?sort=name");
+  return api.get("stories/1/characters?sort=name");
 };
 
 const getAllIDs = () => {
-  return api.get("characters?fields=id,name&sort=name");
+  return api.get("stories/1/characters?fields=id,name&sort=name");
 }
 
 const get = id => {
@@ -13,7 +13,7 @@ const get = id => {
 };
 
 const create = data => {
-  return api.post("characters", data);
+  return api.post("/stories/1/characters", data);
 };
 
 const update = (id, data) => {

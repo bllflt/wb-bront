@@ -39,7 +39,7 @@ export default function MarkdownEditor({ value, onChange }: MarkdownEditorProps)
                 [CrepeFeature.Toolbar]: true,
                 [CrepeFeature.Placeholder]: true,
                 [CrepeFeature.Table]: false,
-                [CrepeFeature.TopBar]: true,
+                [CrepeFeature.TopBar]: false,
                 [CrepeFeature.Latex]: false,
             },
             featureConfigs: {
