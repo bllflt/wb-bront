@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import CharacterDataService from '../services/CharacterService';
 import { CharacterID } from '../types';
 
-export function useCharacterSelection(isAuthenticated: boolean, loading: boolean) {
+export function useCharacterSelection(selectedStoryUuid: number | null, isAuthenticated: boolean, loading: boolean) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -15,12 +15,16 @@ export function useCharacterSelection(isAuthenticated: boolean, loading: boolean
         if (!isAuthenticated) {
             return Promise.resolve();
         }
-        return CharacterDataService.getAllIDs()
+        if (!selectedStoryUuid) {
+            setCharacterIDs([]);
+            return Promise.resolve();
+        }
+        return CharacterDataService.getAllIDs(selectedStoryUuid)
             .then((response) => setCharacterIDs(response.data))
             .catch((e) => {
                 console.error('Failed to load character IDs', e);
             });
-    }, [isAuthenticated]);
+    }, [isAuthenticated, selectedStoryUuid]);
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {

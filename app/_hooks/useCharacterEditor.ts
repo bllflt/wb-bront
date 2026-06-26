@@ -136,7 +136,7 @@ export function characterEditorReducer(
     }
 }
 
-export function useCharacterEditor() {
+export function useCharacterEditor(storyId: number | null) {
     const [editorState, dispatch] = useReducer(characterEditorReducer, initialEditorState);
 
     const fetchCharacter = useCallback(async (id: string) => {
@@ -167,7 +167,10 @@ export function useCharacterEditor() {
                 await CharacterDataService.update(editorState.selectedCharacterId, editorState.character);
                 return editorState.selectedCharacterId;
             } else {
-                const response = await CharacterDataService.create(editorState.character);
+                if (!storyId) {
+                    throw new Error('No story selected.');
+                }
+                const response = await CharacterDataService.create(editorState.character, storyId);
                 const { id: charId, ...restOfResponseData } = response.data;
                 const character: CharacterDataWithoutID = {
                     ...restOfResponseData,
@@ -183,7 +186,7 @@ export function useCharacterEditor() {
         } finally {
             dispatch({ type: 'SET_LOADING', payload: false });
         }
-    }, [editorState.character, editorState.selectedCharacterId]);
+    }, [editorState.character, editorState.selectedCharacterId, storyId]);
 
     const deleteCharacter = useCallback(async () => {
         if (!editorState.selectedCharacterId) return;

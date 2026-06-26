@@ -1,19 +1,19 @@
 import api from "./api";
 
-const getAll = () => {
-  return api.get("stories/1/characters?sort=name");
+const getAll = (storyId = 1) => {
+  return api.get(`stories/${storyId}/characters?sort=name`);
 };
 
-const getAllIDs = () => {
-  return api.get("stories/1/characters?fields=id,name&sort=name");
+const getAllIDs = (storyId = 1) => {
+  return api.get(`stories/${storyId}/characters?fields=id,name&sort=name`);
 }
 
 const get = id => {
   return api.get(`characters/${id}`);
 };
 
-const create = data => {
-  return api.post("/stories/1/characters", data);
+const create = (data, storyId = 1) => {
+  return api.post(`stories/${storyId}/characters`, data);
 };
 
 const update = (id, data) => {

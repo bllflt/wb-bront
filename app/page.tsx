@@ -23,6 +23,7 @@ import { useCharacterEditor } from './_hooks/useCharacterEditor';
 import { useCharacterEvents } from './_hooks/useCharacterEvents';
 import { useCharacterSelection } from './_hooks/useCharacterSelection';
 import { CharacterDataWithoutID } from './types';
+import StoryService from './services/StoryService';
 
 const CharacterList = () => {
     const [showErrorModal, setShowErrorModal] = useState(false);
@@ -32,7 +33,25 @@ const CharacterList = () => {
     const [relationsVersion, setRelationsVersion] = useState(0);
     const { isAuthenticated, loading, logout } = useAuth();
 
-    const { characterIDs, selectedCharacterId, handleCharacterChange, refreshCharacterIDs } = useCharacterSelection(isAuthenticated, loading);
+    const [stories, setStories] = useState<{ uuid: number; name: string }[]>([]);
+    const [selectedStoryUuid, setSelectedStoryUuid] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (isAuthenticated && !loading) {
+            StoryService.get_story_names()
+                .then((response) => {
+                    setStories(response.data);
+                    if (response.data && response.data.length > 0) {
+                        setSelectedStoryUuid(response.data[0].uuid);
+                    }
+                })
+                .catch((error) => {
+                    console.error("Failed to fetch story names", error);
+                });
+        }
+    }, [isAuthenticated, loading]);
+
+    const { characterIDs, selectedCharacterId, handleCharacterChange, refreshCharacterIDs } = useCharacterSelection(selectedStoryUuid, isAuthenticated, loading);
     const {
         editorState,
         dispatch,
@@ -43,7 +62,7 @@ const CharacterList = () => {
         updateArrayField,
         resetCharacter,
         setError,
-    } = useCharacterEditor();
+    } = useCharacterEditor(selectedStoryUuid);
 
     useCharacterEvents({
         selectedCharacterId: editorState.selectedCharacterId,
@@ -135,6 +154,23 @@ const CharacterList = () => {
             />
             <Form>
                 <Row>
+                    <Col xs="auto">
+                        <Form.Select
+                            value={selectedStoryUuid ?? ''}
+                            onChange={(e) => {
+                                const newUuid = parseInt(e.target.value, 10);
+                                setSelectedStoryUuid(isNaN(newUuid) ? null : newUuid);
+                                handleCharacterChange(null);
+                            }}
+                        >
+                            <option value="" disabled>Select a story...</option>
+                            {stories.map((story) => (
+                                <option key={story.uuid} value={story.uuid}>
+                                    {story.name}
+                                </option>
+                            ))}
+                        </Form.Select>
+                    </Col>
                     <Col xs="auto">
                         <Typeahead
                             id="character-combo"
