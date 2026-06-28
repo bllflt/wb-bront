@@ -12,9 +12,10 @@ import Markdown from 'react-markdown';
 type Props = {
     show: boolean;
     onHide: () => void;
+    selectedStoryUuid?: number | null;
 };
 
-export default function ChatModal({ show, onHide }: Props) {
+export default function ChatModal({ show, onHide, selectedStoryUuid }: Props) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [sending, setSending] = useState(false);
@@ -63,7 +64,7 @@ export default function ChatModal({ show, onHide }: Props) {
 
         try {
             // Send only the user message; server returns LLM response
-            const res = await ChatService.sendMessage(text);
+            const res = await ChatService.sendMessage(text, selectedStoryUuid);
             const assistantContent = res.data?.assistant || '(No response)';
 
             // Add assistant response to local history

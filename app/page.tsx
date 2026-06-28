@@ -52,6 +52,12 @@ const CharacterList = () => {
     }, [isAuthenticated, loading]);
 
     const { characterIDs, selectedCharacterId, handleCharacterChange, refreshCharacterIDs } = useCharacterSelection(selectedStoryUuid, isAuthenticated, loading);
+
+    useEffect(() => {
+        if (isAuthenticated && !loading) {
+            void refreshCharacterIDs();
+        }
+    }, [selectedStoryUuid, refreshCharacterIDs, isAuthenticated, loading]);
     const {
         editorState,
         dispatch,
@@ -139,7 +145,11 @@ const CharacterList = () => {
 
     return (
         <div>
-            <ChatModal show={showChatModal} onHide={() => setShowChatModal(false)} />
+            <ChatModal
+                show={showChatModal}
+                onHide={() => setShowChatModal(false)}
+                selectedStoryUuid={selectedStoryUuid}
+            />
 
             <ErrorModal
                 show={showErrorModal}

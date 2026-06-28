@@ -10,8 +10,12 @@ export type ChatMessage = {
 };
 
 const ChatService = {
-    sendMessage: (content: string) =>
-        http.post<{ assistant: string }>('/chat/conversation', { content }),
+    sendMessage: (content: string, storyUuid?: number | null) => {
+        const url = storyUuid !== undefined && storyUuid !== null
+            ? `/chat/conversation?story_uuid=${storyUuid}`
+            : '/chat/conversation';
+        return http.post<{ assistant: string }>(url, { content });
+    },
 
     getHistory: async (): Promise<ChatMessage[]> => {
         const raw = await http.post<string[]>('/chat/get_history');

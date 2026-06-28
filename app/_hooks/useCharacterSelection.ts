@@ -26,18 +26,6 @@ export function useCharacterSelection(selectedStoryUuid: number | null, isAuthen
             });
     }, [isAuthenticated, selectedStoryUuid]);
 
-    useEffect(() => {
-        if (!loading && !isAuthenticated) {
-            return;
-        }
-
-        if (!isAuthenticated) {
-            return;
-        }
-
-        refreshCharacterIDs();
-    }, [isAuthenticated, loading, refreshCharacterIDs]);
-
     const selectedCharacterId = searchParams.get('characterId');
 
     const handleCharacterChange = useCallback(
