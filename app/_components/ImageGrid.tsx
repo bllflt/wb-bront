@@ -15,7 +15,7 @@ import { CharacterImage } from '../types';
 interface ImageGridProps {
     images: CharacterImage[];
     dispatch: React.Dispatch<CharacterEditorAction>;
-    characterId: number | null;
+    characterId: string | null;
 }
 
 const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) => {

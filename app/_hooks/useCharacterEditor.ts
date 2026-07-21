@@ -9,14 +9,14 @@ export type CharacterImage = string;
 export type CharacterField = keyof CharacterDataWithoutID;
 
 export interface CharacterEditorState {
-    selectedCharacterId: number | null;
+    selectedCharacterId: string | null;
     character: CharacterDataWithoutID | null;
     loading: boolean;
     error: string | null;
 }
 
 export type CharacterEditorAction =
-    | { type: 'SET_CHARACTER'; payload: { selectedCharacterId: number | null; character: CharacterDataWithoutID | null } }
+    | { type: 'SET_CHARACTER'; payload: { selectedCharacterId: string | null; character: CharacterDataWithoutID | null } }
     | { type: 'UPDATE_FIELD'; payload: { field: CharacterField; value: string | number | string[] } }
     | { type: 'UPDATE_ARRAY_FIELD'; payload: { field: CharacterField; value: unknown[] } }
     | { type: 'MERGE_CHANGES'; payload: Partial<CharacterDataWithoutID> }

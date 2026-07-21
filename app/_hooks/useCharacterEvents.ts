@@ -6,7 +6,7 @@ import { CharacterEditorAction } from './useCharacterEditor';
 import { CDProps } from '../_components/ReconcileDescription';
 
 interface UseCharacterEventsProps {
-    selectedCharacterId: number | null;
+    selectedCharacterId: string | null;
     isAuthenticated: boolean;
     dispatch: Dispatch<CharacterEditorAction>;
     onReconcileEvent: (message: CDProps) => void;

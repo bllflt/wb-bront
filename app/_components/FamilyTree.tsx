@@ -167,11 +167,11 @@ const styleSheet: cytoscape.StylesheetJsonBlock[] = [{
 
 
 interface FamilyTreeProps {
-  characterId: number;
+  characterId: string;
 }
 
 interface Participant {
-  id: number;
+  id: string;
   role: string;
   sex: number;
   name: string;
@@ -184,7 +184,7 @@ interface Union {
 }
 
 interface FamilyTreeProps {
-  characterId: number;
+  characterId: string;
   onNodeClick: (id: string) => void;
   refreshTrigger?: number;
 }
@@ -201,7 +201,7 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ characterId, onNodeClick, refre
 
     const expander = (unions: Union[]): cytoscape.ElementDefinition[] => {
       const elements: cytoscape.ElementDefinition[] = [];
-      const seenParticipants = new Set<number>();
+      const seenParticipants = new Set<string>();
 
       for (const union of unions) {
         // Each union from the API represents a family unit.

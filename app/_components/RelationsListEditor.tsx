@@ -361,17 +361,17 @@ export default function RelationsListEditor({
             // for consistency with loaded data, mark us as the "target" of this
             // relation so removal logic can work uniformly later on.
             relationship.targetCharacterId = String(characterId);
-            relationship.targetCharacterName = availableCharacters.find(c => c.id === Number(characterId))?.name;
+            relationship.targetCharacterName = availableCharacters.find(c => c.id === characterId)?.name;
         } else if (relType === 'PARENT') {
             // union select stored in partnershipId, child select in targetCharacterId
             relationship.partnershipId = newRelation.partnershipId;
             relationship.partnershipName = myMatePartnerships.find(u => u.id === newRelation.partnershipId)?.label;
             relationship.partnershipType = 1;
             relationship.targetCharacterId = String(newRelation.targetCharacterId);
-            relationship.targetCharacterName = availableCharacters.find(c => c.id === Number(newRelation.targetCharacterId))?.name;
+            relationship.targetCharacterName = availableCharacters.find(c => c.id === newRelation.targetCharacterId)?.name;
         } else {
             relationship.targetCharacterId = String(newRelation.targetCharacterId);
-            relationship.targetCharacterName = availableCharacters.find(c => c.id === Number(newRelation.targetCharacterId))?.name;
+            relationship.targetCharacterName = availableCharacters.find(c => c.id === newRelation.targetCharacterId)?.name;
             // MATE, CONCUBINE, PARAMOUR are LIAISON; others are FACTION
             relationship.partnershipType = ['MATE', 'CONCUBINE', 'PARAMOUR'].includes(relType) ? 1 : 2;
         }
@@ -713,7 +713,7 @@ export default function RelationsListEditor({
                                     labelKey="name"
                                     options={availableCharacters}
                                     placeholder="Select child"
-                                    selected={newRelation.targetCharacterId ? availableCharacters.filter(c => c.id === Number(newRelation.targetCharacterId)) : []}
+                                    selected={newRelation.targetCharacterId ? availableCharacters.filter(c => c.id === newRelation.targetCharacterId) : []}
                                     onChange={(selected: any[]) => {
                                         if (selected.length > 0) {
                                             setNewRelation({ ...newRelation, targetCharacterId: String(selected[0].id) });
@@ -733,7 +733,7 @@ export default function RelationsListEditor({
                                 labelKey="name"
                                 options={availableCharacters}
                                 placeholder="Select character"
-                                selected={newRelation.targetCharacterId ? availableCharacters.filter(c => c.id === Number(newRelation.targetCharacterId)) : []}
+                                selected={newRelation.targetCharacterId ? availableCharacters.filter(c => c.id === newRelation.targetCharacterId) : []}
                                 onChange={(selected: any[]) => {
                                     if (selected.length > 0) {
                                         setNewRelation({ ...newRelation, targetCharacterId: String(selected[0].id) });
