@@ -84,7 +84,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
 
         setIsGenerating(true);
         try {
-            const response = await fetch(`http://localhost:2000/characters/generate-image`, {
+            const response = await fetch(`http://localhost/api/v1/characters/generate-image`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
