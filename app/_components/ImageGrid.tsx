@@ -109,10 +109,25 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images, dispatch, characterId }) 
                 <Col>
                     <Carousel activeIndex={activeIndex} onSelect={handleSelect}
                         controls={true}
-                        variant={"dark"}
                         wrap={false}
                         slide={false}
-                        interval={null}>
+                        interval={null}
+                        prevIcon={
+                            <span
+                                className="carousel-control-prev-icon"
+                                style={{ backgroundColor: 'rgba(0,0,0,0.6)', padding: '20px', borderRadius: '50%' }}
+                                aria-hidden="true"
+                            />
+                        }
+                        nextIcon={
+                            <span
+                                className="carousel-control-next-icon"
+                                style={{ backgroundColor: 'rgba(0,0,0,0.6)', padding: '20px', borderRadius: '50%' }}
+                                aria-hidden="true"
+                            />
+                        }
+                    >
+
                         {images.map((img: CharacterImage) => (
                             <Carousel.Item key={img}>
                                 <Image
