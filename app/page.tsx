@@ -19,6 +19,7 @@ import FamilyTree from './_components/FamilyTree';
 import ImageGrid from './_components/ImageGrid';
 import { CDProps, ReconcileDescriptionModal } from "./_components/ReconcileDescription";
 import RelationsListEditor from "./_components/RelationsListEditor";
+import ArsMagicaEditor from './_components/ArsMagicaEditor';
 import { useCharacterEditor } from './_hooks/useCharacterEditor';
 import { useCharacterEvents } from './_hooks/useCharacterEvents';
 import { useCharacterSelection } from './_hooks/useCharacterSelection';
@@ -325,6 +326,13 @@ const CharacterList = () => {
                                             />
                                         )}
 
+                                    </Tab>
+                                    <Tab eventKey="ars-magica" title="Ars Magica" id="arsmagica-tab">
+                                        {editorState.selectedCharacterId && (
+                                            <ArsMagicaEditor
+                                                characterId={editorState.selectedCharacterId}
+                                            />
+                                        )}
                                     </Tab>
                                 </Tabs>
 
