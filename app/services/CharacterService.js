@@ -38,7 +38,7 @@ const getCharacterVirtues = (id) => {
 };
 
 const addCharacterVirtue = (id, virtueName) => {
-  return api.post(`characters/${id}/virtues`, { name: virtueName });
+  return api.post(`characters/${id}/virtues/`, { name: virtueName });
 };
 
 const deleteCharacterVirtue = (id, virtueName) => {
