@@ -33,6 +33,18 @@ const getCharacterConnections = (id, degree) => {
   return api.get(`characters/${id}/connections?degree=${degree}`);
 };
 
+const getCharacterVirtues = (id) => {
+  return api.get(`characters/${id}/virtues`);
+};
+
+const addCharacterVirtue = (id, virtueName) => {
+  return api.post(`characters/${id}/virtues`, { name: virtueName });
+};
+
+const deleteCharacterVirtue = (id, virtueName) => {
+  return api.delete(`characters/${id}/virtues/${encodeURIComponent(virtueName)}`);
+};
+
 const CharacterService = {
   getAll,
   getAllIDs,
@@ -42,6 +54,9 @@ const CharacterService = {
   remove,
   findByName,
   getCharacterConnections,
+  getCharacterVirtues,
+  addCharacterVirtue,
+  deleteCharacterVirtue
 };
 
 export default CharacterService;
