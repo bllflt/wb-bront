@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { Typeahead } from 'react-bootstrap-typeahead';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AsyncTypeahead } from 'react-bootstrap-typeahead';
 import 'react-bootstrap-typeahead/css/Typeahead.css';
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
@@ -12,8 +12,8 @@ import Spinner from 'react-bootstrap/Spinner';
 import Tooltip from 'react-bootstrap/Tooltip';
 
 interface TraitCatalogService {
-    getAllIDs: () => Promise<any>;
     get: (name: string) => Promise<any>;
+    semanticSearch: (query: string) => Promise<any>;
 }
 
 interface CharacterTraitEditorProps {
@@ -61,6 +61,8 @@ export default function CharacterTraitEditor({
     const [traitOptions, setTraitOptions] = useState<any[]>([]);
     const [loadingTraitOptions, setLoadingTraitOptions] = useState(false);
     const [errorTraitOptions, setErrorTraitOptions] = useState<string | null>(null);
+    const searchRequestId = useRef(0);
+    const currentSearchQuery = useRef('');
     const [selectedAddTrait, setSelectedAddTrait] = useState<any[]>([]);
     const [addTraitDescription, setAddTraitDescription] = useState<string | null>(null);
     const [addTraitDetails, setAddTraitDetails] = useState<string | null>(null);
@@ -81,35 +83,42 @@ export default function CharacterTraitEditor({
         }
     }, [catalogService, singular, traitDescriptions]);
 
-    useEffect(() => {
-        let isMounted = true;
+    const searchTraits = useCallback(async (query: string) => {
+        const normalizedQuery = query.trim();
+        if (normalizedQuery.length < 2 || normalizedQuery !== currentSearchQuery.current) return;
+
+        const requestId = ++searchRequestId.current;
         setLoadingTraitOptions(true);
         setErrorTraitOptions(null);
+        setTraitOptions([]);
 
-        catalogService.getAllIDs()
-            .then((response: any) => {
-                if (!isMounted) return;
-                const data = response?.data;
-                if (Array.isArray(data)) {
-                    setTraitOptions(data);
-                } else {
-                    setTraitOptions(data ? [data] : []);
-                }
-            })
-            .catch((error: any) => {
-                if (isMounted) {
-                    console.error(`Failed to fetch ${singular} IDs:`, error);
-                    setErrorTraitOptions(`Failed to load available ${plural} list.`);
-                }
-            })
-            .finally(() => {
-                if (isMounted) setLoadingTraitOptions(false);
-            });
+        try {
+            const response = await catalogService.semanticSearch(normalizedQuery);
+            if (requestId !== searchRequestId.current) return;
 
-        return () => {
-            isMounted = false;
-        };
-    }, [catalogService, plural, singular]);
+            if (!Array.isArray(response?.data)) {
+                throw new Error(`Unexpected ${plural} search response.`);
+            }
+            setTraitOptions(response.data);
+        } catch (error) {
+            if (requestId === searchRequestId.current) {
+                console.error(`Failed to search ${plural}:`, error);
+                setErrorTraitOptions(`Failed to search available ${plural}.`);
+            }
+        } finally {
+            if (requestId === searchRequestId.current) {
+                setLoadingTraitOptions(false);
+            }
+        }
+    }, [catalogService, plural]);
+
+    const handleSearchInputChange = (query: string) => {
+        currentSearchQuery.current = query.trim();
+        searchRequestId.current += 1;
+        setTraitOptions([]);
+        setLoadingTraitOptions(false);
+        setErrorTraitOptions(null);
+    };
 
     useEffect(() => {
         if (!characterId) {
@@ -289,41 +298,40 @@ export default function CharacterTraitEditor({
 
             <h6 className="mb-2">Add {singular}...</h6>
             <Form.Group controlId={`add-${singular}-selection`} className="mb-3">
-                {loadingTraitOptions ? (
-                    <div>
-                        <Spinner animation="border" size="sm" className="me-2" />
-                        Loading available {plural}...
+                <div className="d-flex align-items-start gap-2">
+                    <div className="flex-grow-1">
+                        <AsyncTypeahead
+                            filterBy={() => true}
+                            id={`add-${singular}-typeahead`}
+                            options={traitOptions}
+                            isLoading={loadingTraitOptions}
+                            onSearch={searchTraits}
+                            onInputChange={handleSearchInputChange}
+                            minLength={2}
+                            useCache={false}
+                            clearButton={true}
+                            labelKey={(option: any) => getTraitName(option)}
+                            placeholder={`Search ${singular}`}
+                            onChange={handleAddSelectionChange}
+                            selected={selectedAddTrait}
+                        />
                     </div>
-                ) : (
-                    <div className="d-flex align-items-start gap-2">
-                        <div className="flex-grow-1">
-                            <Typeahead
-                                id={`add-${singular}-typeahead`}
-                                options={traitOptions}
-                                clearButton={true}
-                                labelKey={(option: any) => getTraitName(option)}
-                                placeholder={`Select ${singular}`}
-                                onChange={handleAddSelectionChange}
-                                selected={selectedAddTrait}
-                            />
-                        </div>
-                        <Button
-                            variant="primary"
-                            onClick={handleAddTrait}
-                            disabled={!selectedAddTrait.length || submittingTrait || !characterId}
-                            style={{ whiteSpace: 'nowrap' }}
-                        >
-                            {submittingTrait ? (
-                                <>
-                                    <Spinner animation="border" size="sm" className="me-2" />
-                                    Adding...
-                                </>
-                            ) : (
-                                `Add ${title}`
-                            )}
-                        </Button>
-                    </div>
-                )}
+                    <Button
+                        variant="primary"
+                        onClick={handleAddTrait}
+                        disabled={!selectedAddTrait.length || submittingTrait || !characterId}
+                        style={{ whiteSpace: 'nowrap' }}
+                    >
+                        {submittingTrait ? (
+                            <>
+                                <Spinner animation="border" size="sm" className="me-2" />
+                                Adding...
+                            </>
+                        ) : (
+                            `Add ${title}`
+                        )}
+                    </Button>
+                </div>
                 {errorTraitOptions && (
                     <Alert variant="danger" className="mt-2">{errorTraitOptions}</Alert>
                 )}
