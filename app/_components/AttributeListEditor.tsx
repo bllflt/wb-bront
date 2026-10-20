@@ -1,6 +1,7 @@
 'use client';
 
 import React from "react";
+import Button from 'react-bootstrap/Button';
 
 interface AttributeListEditorProps {
   attributes: string[];
@@ -37,22 +38,21 @@ const AttributeListEditor: React.FC<AttributeListEditorProps> = ({ attributes, o
             className="border rounded px-2 py-1 flex-grow"
             placeholder={`Attribute ${index + 1}`}
           />
-          <button
-            type="button"
+          <Button
+            variant="outline-danger"
+            size="sm"
             onClick={() => handleDelete(index)}
-            className="bg-red-500 text-white px-2 py-1 rounded"
           >
             -
-          </button>
+          </Button>
         </div>
       ))}
-      <button
-        type="button"
+      <Button
+        variant="primary"
         onClick={handleAdd}
-        className="bg-blue-500 text-white px-3 py-1 rounded"
       >
         + Add Attribute
-      </button>
+      </Button>
     </div>
   );
 };
