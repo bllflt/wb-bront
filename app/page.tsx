@@ -252,105 +252,105 @@ const CharacterList = () => {
                         </div>
                         {/* Text fields column */}
                         <div className="w-2/3 flex flex-col gap-4">
-                            <Form>
-                                <Row>
-                                    <Col>
-                                        <Form.Group controlId="name">
-                                            <Form.Label>Name:</Form.Label>
+                            <Tabs defaultActiveKey="overview" id="character-details-tabs" fill>
+                                <Tab eventKey="overview" title="Overview">
+                                    <Form className="mt-2">
+                                        <Row>
+                                            <Col>
+                                                <Form.Group controlId="name">
+                                                    <Form.Label>Name:</Form.Label>
+                                                    <Form.Control
+                                                        type="text"
+                                                        name="name"
+                                                        value={editorState.character.name}
+                                                        onChange={handleInputChange}
+                                                        placeholder="Enter name"
+                                                    />
+                                                </Form.Group>
+                                            </Col>
+                                            <Col>
+                                                <Form.Group controlId="sex">
+                                                    <Form.Label>Sex:</Form.Label>
+                                                    <Form.Control
+                                                        as="select"
+                                                        name="sex"
+                                                        value={editorState.character.sex}
+                                                        style={{ width: 'fit-content' }}
+                                                        onChange={handleInputChange}
+                                                    >
+                                                        <option value="none" disabled hidden>Select sex</option>
+                                                        <option value={0}>Not known</option>
+                                                        <option value={1}>Male</option>
+                                                        <option value={2}>Female</option>
+                                                        <option value={9}>Not applicable</option>
+                                                    </Form.Control>
+                                                </Form.Group>
+                                            </Col>
+                                        </Row>
+
+                                        <Form.Group controlId="appearance">
+                                            <Form.Label>Appearance:</Form.Label>
                                             <Form.Control
-                                                type="text"
-                                                name="name"
-                                                value={editorState.character.name}
+                                                as="textarea"
+                                                name="appearance"
+                                                value={editorState.character.appearance ?? ''}
                                                 onChange={handleInputChange}
-                                                placeholder="Enter name"
+                                                placeholder="Enter appearance"
+                                                rows={4}
                                             />
                                         </Form.Group>
-                                    </Col>
-                                    <Col>
-                                        <Form.Group controlId="sex">
-                                            <Form.Label>Sex:</Form.Label>
-                                            <Form.Control
-                                                as="select"
-                                                name="sex"
-                                                value={editorState.character.sex}
-                                                style={{ width: 'fit-content' }}
-                                                onChange={handleInputChange}
-                                            >
-                                                <option value="none" disabled hidden>Select sex</option>
-                                                <option value={0}>Not known</option>
-                                                <option value={1}>Male</option>
-                                                <option value={2}>Female</option>
-                                                <option value={9}>Not applicable</option>
-                                            </Form.Control>
-                                        </Form.Group>
-                                    </Col>
-                                </Row>
 
-                                <Form.Group controlId="appearance">
-                                    <Form.Label>Appearance:</Form.Label>
-                                    <Form.Control
-                                        as="textarea"
-                                        name="appearance"
-                                        value={editorState.character.appearance ?? ''}
-                                        onChange={handleInputChange}
-                                        placeholder="Enter appearance"
-                                        rows={4}
-                                    />
-                                </Form.Group>
-
-
-                                <div>
-                                    <label>Attributes:</label>
-                                    <AttributeListEditor
-                                        attributes={editorState.character.roleplaying ?? []}
-                                        onChange={handleAttributesChange}
-                                    />
-                                </div>
-
-                                <Tabs defaultActiveKey="background" id="character-details-tabs" fill>
-                                    <Tab eventKey="background" title="Background">
-                                        <div className="mt-2 bg-white rounded">
-                                            <MarkdownEditor
-                                                key={editorState.selectedCharacterId ?? 'new'}
-                                                value={editorState.character.background ?? ''}
-                                                onChange={(val) => updateField('background', val)}
+                                        <div>
+                                            <label>Attributes:</label>
+                                            <AttributeListEditor
+                                                attributes={editorState.character.roleplaying ?? []}
+                                                onChange={handleAttributesChange}
                                             />
                                         </div>
-                                    </Tab>
-                                    <Tab eventKey="key-relations" title="Key Relations" id="keyrelations-tab">
-                                        {editorState.selectedCharacterId && (
-                                            <RelationsListEditor
-                                                characterId={editorState.selectedCharacterId}
-                                                availableCharacters={characterIDs.filter(c => c.id !== editorState.selectedCharacterId)}
-                                                onSave={() => setRelationsVersion(prev => prev + 1)}
-                                            />
-                                        )}
 
-                                    </Tab>
-                                    <Tab eventKey="ars-magica" title="Ars Magica" id="arsmagica-tab">
-                                        {editorState.selectedCharacterId && (
-                                            <ArsMagicaEditor
-                                                characterId={editorState.selectedCharacterId}
-                                            />
-                                        )}
-                                    </Tab>
-                                </Tabs>
+                                        <div>
+                                            <Form.Label>Background:</Form.Label>
+                                            <div className="bg-white rounded">
+                                                <MarkdownEditor
+                                                    key={editorState.selectedCharacterId ?? 'new'}
+                                                    value={editorState.character.background ?? ''}
+                                                    onChange={(val) => updateField('background', val)}
+                                                />
+                                            </div>
+                                        </div>
 
-                                <div className="flex justify-between mt-2">
-                                    <Button
-                                        variant="primary"
-                                        onClick={handleSave}>
-                                        Save
-                                    </Button>
-                                    <Button
-                                        variant="danger"
-                                        onClick={handleDelete}
-                                        disabled={!editorState.selectedCharacterId}>
-                                        Delete
-                                    </Button>
-                                </div>
-                            </Form>
-
+                                        <div className="flex justify-between mt-2">
+                                            <Button
+                                                variant="primary"
+                                                onClick={handleSave}>
+                                                Save
+                                            </Button>
+                                            <Button
+                                                variant="danger"
+                                                onClick={handleDelete}
+                                                disabled={!editorState.selectedCharacterId}>
+                                                Delete
+                                            </Button>
+                                        </div>
+                                    </Form>
+                                </Tab>
+                                <Tab eventKey="key-relations" title="Key Relations" id="keyrelations-tab">
+                                    {editorState.selectedCharacterId && (
+                                        <RelationsListEditor
+                                            characterId={editorState.selectedCharacterId}
+                                            availableCharacters={characterIDs.filter(c => c.id !== editorState.selectedCharacterId)}
+                                            onSave={() => setRelationsVersion(prev => prev + 1)}
+                                        />
+                                    )}
+                                </Tab>
+                                <Tab eventKey="ars-magica" title="Ars Magica" id="arsmagica-tab">
+                                    {editorState.selectedCharacterId && (
+                                        <ArsMagicaEditor
+                                            characterId={editorState.selectedCharacterId}
+                                        />
+                                    )}
+                                </Tab>
+                            </Tabs>
                         </div>
                     </div>
                 ) : (
