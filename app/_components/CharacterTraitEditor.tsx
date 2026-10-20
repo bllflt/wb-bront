@@ -44,6 +44,19 @@ function getDescription(data: any): string {
     return '';
 }
 
+function getTraitPointValue(level: unknown): number | null {
+    switch (level) {
+        case 'Free':
+            return 0;
+        case 'Minor':
+            return 1;
+        case 'Major':
+            return 3;
+        default:
+            return null;
+    }
+}
+
 export default function CharacterTraitEditor({
     characterId,
     onSave,
@@ -68,17 +81,28 @@ export default function CharacterTraitEditor({
     const [addTraitDetails, setAddTraitDetails] = useState<string | null>(null);
     const [loadingAddDescription, setLoadingAddDescription] = useState(false);
     const [traitDescriptions, setTraitDescriptions] = useState<Record<string, string>>({});
+    const [traitPointValues, setTraitPointValues] = useState<Record<string, number | null>>({});
     const [submittingTrait, setSubmittingTrait] = useState(false);
     const [deletingTrait, setDeletingTrait] = useState<string | null>(null);
+    const allTraitPointsLoaded = characterTraits.every(name => Object.prototype.hasOwnProperty.call(traitPointValues, name));
+    const traitPointsUnavailable = characterTraits.some(name => traitPointValues[name] === null);
+    const totalTraitPoints = characterTraits.reduce((total, name) => total + (traitPointValues[name] ?? 0), 0);
 
     const fetchTraitDescription = useCallback(async (name: string) => {
         if (!name || traitDescriptions[name] !== undefined) return;
         try {
             const response = await catalogService.get(name);
-            const description = getDescription(response?.data) || 'No description available.';
+            const data = response?.data;
+            const description = getDescription(data) || 'No description available.';
+            const pointValue = getTraitPointValue(data?.level);
+            if (pointValue === null) {
+                console.warn(`Unexpected ${singular} level for "${name}":`, data?.level);
+            }
+            setTraitPointValues(previous => ({ ...previous, [name]: pointValue }));
             setTraitDescriptions(previous => ({ ...previous, [name]: description }));
         } catch (error) {
             console.error(`Failed to fetch description for ${singular} "${name}":`, error);
+            setTraitPointValues(previous => ({ ...previous, [name]: null }));
             setTraitDescriptions(previous => ({ ...previous, [name]: 'Failed to load description.' }));
         }
     }, [catalogService, singular, traitDescriptions]);
@@ -185,6 +209,11 @@ export default function CharacterTraitEditor({
         catalogService.get(name)
             .then((response: any) => {
                 const data = response?.data;
+                const pointValue = getTraitPointValue(data?.level);
+                if (pointValue === null) {
+                    console.warn(`Unexpected ${singular} level for "${name}":`, data?.level);
+                }
+                setTraitPointValues(previous => ({ ...previous, [name]: pointValue }));
                 setAddTraitDescription(getDescription(data) || 'No description available.');
                 if (data && typeof data === 'object') {
                     const details = [data.level, data.category, data.tainted ? 'Tainted' : null]
@@ -199,6 +228,7 @@ export default function CharacterTraitEditor({
             })
             .catch((error: any) => {
                 console.error(`Failed to fetch description for ${singular} "${name}":`, error);
+                setTraitPointValues(previous => ({ ...previous, [name]: null }));
                 setAddTraitDescription('Failed to load description.');
                 setAddTraitDetails(null);
             })
@@ -244,6 +274,18 @@ export default function CharacterTraitEditor({
     return (
         <div className="h-100">
             <h5 className="mb-3">{title}s</h5>
+            <div className="mb-3 text-muted" aria-live="polite">
+                points:{' '}
+                {loadingCharacterTraits
+                    ? 'Loading...'
+                    : errorCharacterTraits
+                        ? 'Unavailable'
+                        : !allTraitPointsLoaded
+                            ? 'Calculating...'
+                            : traitPointsUnavailable
+                                ? 'Unavailable'
+                                : totalTraitPoints}
+            </div>
 
             {loadingCharacterTraits ? (
                 <div className="my-3 text-muted">
