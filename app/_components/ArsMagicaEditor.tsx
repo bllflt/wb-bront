@@ -4,6 +4,7 @@ import CharacterTraitEditor from './CharacterTraitEditor';
 import CharacterService from '../services/CharacterService';
 import VirtueService from '../services/VirtueService';
 import FlawService from '../services/FlawService';
+import AbilityService from '../services/AbilityService';
 
 interface ArsMagicaEditorProps {
     characterId?: string | number;
@@ -35,6 +36,19 @@ export default function ArsMagicaEditor({ characterId, onSave }: ArsMagicaEditor
                     getCharacterTraits={CharacterService.getCharacterFlaws}
                     addCharacterTrait={CharacterService.addCharacterFlaw}
                     deleteCharacterTrait={CharacterService.deleteCharacterFlaw}
+                />
+            </div>
+            <div className="col-12">
+                <CharacterTraitEditor
+                    characterId={characterId}
+                    onSave={onSave}
+                    singular="ability"
+                    plural="abilities"
+                    showPoints={false}
+                    catalogService={AbilityService}
+                    getCharacterTraits={CharacterService.getCharacterAbilities}
+                    addCharacterTrait={CharacterService.addCharacterAbility}
+                    deleteCharacterTrait={CharacterService.deleteCharacterAbility}
                 />
             </div>
         </div>

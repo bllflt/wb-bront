@@ -57,6 +57,18 @@ const deleteCharacterFlaw = (id, flawName) => {
   return api.delete(`characters/${id}/flaws/${encodeURIComponent(flawName)}`);
 };
 
+const getCharacterAbilities = (id) => {
+  return api.get(`characters/${id}/abilities`);
+};
+
+const addCharacterAbility = (id, abilityName) => {
+  return api.post(`characters/${id}/abilities/`, { name: abilityName });
+};
+
+const deleteCharacterAbility = (id, abilityName) => {
+  return api.delete(`characters/${id}/abilities/${encodeURIComponent(abilityName)}`);
+};
+
 const CharacterService = {
   getAll,
   getAllIDs,
@@ -71,7 +83,10 @@ const CharacterService = {
   deleteCharacterVirtue,
   getCharacterFlaws,
   addCharacterFlaw,
-  deleteCharacterFlaw
+  deleteCharacterFlaw,
+  getCharacterAbilities,
+  addCharacterAbility,
+  deleteCharacterAbility
 };
 
 export default CharacterService;

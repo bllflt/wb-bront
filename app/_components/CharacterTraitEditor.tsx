@@ -19,8 +19,9 @@ interface TraitCatalogService {
 interface CharacterTraitEditorProps {
     characterId?: string | number;
     onSave?: () => void;
-    singular: 'virtue' | 'flaw';
-    plural: 'virtues' | 'flaws';
+    singular: 'virtue' | 'flaw' | 'ability';
+    plural: 'virtues' | 'flaws' | 'abilities';
+    showPoints?: boolean;
     catalogService: TraitCatalogService;
     getCharacterTraits: (id: string | number) => Promise<any>;
     addCharacterTrait: (id: string | number, name: string) => Promise<any>;
@@ -68,6 +69,7 @@ export default function CharacterTraitEditor({
     onSave,
     singular,
     plural,
+    showPoints = true,
     catalogService,
     getCharacterTraits,
     addCharacterTrait,
@@ -100,18 +102,22 @@ export default function CharacterTraitEditor({
             const response = await catalogService.get(name);
             const data = response?.data;
             const description = getDescription(data) || 'No description available.';
-            const pointValue = getTraitPointValue(data?.level);
-            if (pointValue === null) {
+            const pointValue = showPoints ? getTraitPointValue(data?.level) : null;
+            if (showPoints && pointValue === null) {
                 console.warn(`Unexpected ${singular} level for "${name}":`, data?.level);
             }
-            setTraitPointValues(previous => ({ ...previous, [name]: pointValue }));
+            if (showPoints) {
+                setTraitPointValues(previous => ({ ...previous, [name]: pointValue }));
+            }
             setTraitDescriptions(previous => ({ ...previous, [name]: description }));
         } catch (error) {
             console.error(`Failed to fetch description for ${singular} "${name}":`, error);
-            setTraitPointValues(previous => ({ ...previous, [name]: null }));
+            if (showPoints) {
+                setTraitPointValues(previous => ({ ...previous, [name]: null }));
+            }
             setTraitDescriptions(previous => ({ ...previous, [name]: 'Failed to load description.' }));
         }
-    }, [catalogService, singular, traitDescriptions]);
+    }, [catalogService, showPoints, singular, traitDescriptions]);
 
     const searchTraits = useCallback(async (query: string) => {
         const normalizedQuery = query.trim();
@@ -215,14 +221,18 @@ export default function CharacterTraitEditor({
         catalogService.get(name)
             .then((response: any) => {
                 const data = response?.data;
-                const pointValue = getTraitPointValue(data?.level);
-                if (pointValue === null) {
+                const pointValue = showPoints ? getTraitPointValue(data?.level) : null;
+                if (showPoints && pointValue === null) {
                     console.warn(`Unexpected ${singular} level for "${name}":`, data?.level);
                 }
-                setTraitPointValues(previous => ({ ...previous, [name]: pointValue }));
+                if (showPoints) {
+                    setTraitPointValues(previous => ({ ...previous, [name]: pointValue }));
+                }
                 setAddTraitDescription(getDescription(data) || 'No description available.');
                 if (data && typeof data === 'object') {
-                    const details = [data.level, data.category, data.tainted ? 'Tainted' : null]
+                    const details = (singular === 'ability'
+                        ? [data.type, data.specialties]
+                        : [data.level, data.category, data.tainted ? 'Tainted' : null])
                         .filter(Boolean)
                         .join(', ');
                     setAddTraitDetails(details || null);
@@ -234,7 +244,9 @@ export default function CharacterTraitEditor({
             })
             .catch((error: any) => {
                 console.error(`Failed to fetch description for ${singular} "${name}":`, error);
-                setTraitPointValues(previous => ({ ...previous, [name]: null }));
+                if (showPoints) {
+                    setTraitPointValues(previous => ({ ...previous, [name]: null }));
+                }
                 setAddTraitDescription('Failed to load description.');
                 setAddTraitDetails(null);
             })
@@ -282,18 +294,20 @@ export default function CharacterTraitEditor({
     return (
         <div className="h-100">
             <h5 className="mb-3">{title}s</h5>
-            <div className="mb-3 text-muted" aria-live="polite">
-                points:{' '}
-                {loadingCharacterTraits
-                    ? 'Loading...'
-                    : errorCharacterTraits
-                        ? 'Unavailable'
-                        : !allTraitPointsLoaded
-                            ? 'Calculating...'
-                            : traitPointsUnavailable
-                                ? 'Unavailable'
-                                : totalTraitPoints}
-            </div>
+            {showPoints && (
+                <div className="mb-3 text-muted" aria-live="polite">
+                    points:{' '}
+                    {loadingCharacterTraits
+                        ? 'Loading...'
+                        : errorCharacterTraits
+                            ? 'Unavailable'
+                            : !allTraitPointsLoaded
+                                ? 'Calculating...'
+                                : traitPointsUnavailable
+                                    ? 'Unavailable'
+                                    : totalTraitPoints}
+                </div>
+            )}
 
             {loadingCharacterTraits ? (
                 <div className="my-3 text-muted">
