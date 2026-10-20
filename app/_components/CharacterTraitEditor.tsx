@@ -44,6 +44,12 @@ function getDescription(data: any): string {
     return '';
 }
 
+function sortTraitNames(names: string[]): string[] {
+    return [...new Set(names.filter(Boolean))].sort((left, right) =>
+        left.localeCompare(right, undefined, { sensitivity: 'base' }),
+    );
+}
+
 function getTraitPointValue(level: unknown): number | null {
     switch (level) {
         case 'Free':
@@ -170,8 +176,8 @@ export default function CharacterTraitEditor({
                         names = [data.name];
                     }
                 }
-                setCharacterTraits(names);
-                names.forEach(name => fetchTraitDescription(name));
+                setCharacterTraits(sortTraitNames(names));
+                sortTraitNames(names).forEach(name => fetchTraitDescription(name));
             })
             .catch((error: any) => {
                 if (isMounted) {
@@ -248,7 +254,9 @@ export default function CharacterTraitEditor({
                 console.warn(`addCharacter${title} stub call failed or endpoint not ready:`, error);
             })
             .finally(() => {
-                setCharacterTraits(previous => previous.includes(name) ? previous : [...previous, name]);
+                setCharacterTraits(previous =>
+                    sortTraitNames(previous.includes(name) ? previous : [...previous, name]),
+                );
                 fetchTraitDescription(name);
                 setSelectedAddTrait([]);
                 setAddTraitDescription(null);
@@ -265,7 +273,7 @@ export default function CharacterTraitEditor({
                 console.warn(`deleteCharacter${title} stub call failed or endpoint not ready:`, error);
             })
             .finally(() => {
-                setCharacterTraits(previous => previous.filter(trait => trait !== name));
+                setCharacterTraits(previous => sortTraitNames(previous.filter(trait => trait !== name)));
                 if (onSave) onSave();
                 setDeletingTrait(null);
             });
