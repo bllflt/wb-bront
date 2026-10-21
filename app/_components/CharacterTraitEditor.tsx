@@ -16,15 +16,29 @@ interface TraitCatalogService {
     semanticSearch: (query: string) => Promise<any>;
 }
 
+interface AbilityDetails {
+    speciality: string | null;
+    exp: number | null;
+    score: number | null;
+}
+
+interface CharacterTrait {
+    name: string;
+    speciality?: string | null;
+    exp?: number | null;
+    score?: number | null;
+}
+
 interface CharacterTraitEditorProps {
     characterId?: string | number;
     onSave?: () => void;
     singular: 'virtue' | 'flaw' | 'ability';
     plural: 'virtues' | 'flaws' | 'abilities';
     showPoints?: boolean;
+    showAbilityFields?: boolean;
     catalogService: TraitCatalogService;
     getCharacterTraits: (id: string | number) => Promise<any>;
-    addCharacterTrait: (id: string | number, name: string) => Promise<any>;
+    addCharacterTrait: (id: string | number, name: string, details?: AbilityDetails) => Promise<any>;
     deleteCharacterTrait: (id: string | number, name: string) => Promise<any>;
 }
 
@@ -45,10 +59,29 @@ function getDescription(data: any): string {
     return '';
 }
 
-function sortTraitNames(names: string[]): string[] {
-    return [...new Set(names.filter(Boolean))].sort((left, right) =>
-        left.localeCompare(right, undefined, { sensitivity: 'base' }),
+function sortCharacterTraits(traits: CharacterTrait[]): CharacterTrait[] {
+    const traitsByName = new Map<string, CharacterTrait>();
+    traits.forEach(trait => {
+        if (trait.name && !traitsByName.has(trait.name)) {
+            traitsByName.set(trait.name, trait);
+        }
+    });
+    return [...traitsByName.values()].sort((left, right) =>
+        left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }),
     );
+}
+
+function getCharacterTrait(item: any): CharacterTrait {
+    if (typeof item === 'string') return { name: item };
+    if (item && typeof item === 'object') {
+        return {
+            name: getTraitName(item),
+            speciality: item.speciality ?? null,
+            exp: item.exp ?? null,
+            score: item.score ?? null,
+        };
+    }
+    return { name: '' };
 }
 
 function getTraitPointValue(level: unknown): number | null {
@@ -70,21 +103,27 @@ export default function CharacterTraitEditor({
     singular,
     plural,
     showPoints = true,
+    showAbilityFields = false,
     catalogService,
     getCharacterTraits,
     addCharacterTrait,
     deleteCharacterTrait,
 }: CharacterTraitEditorProps) {
     const title = `${singular[0].toUpperCase()}${singular.slice(1)}`;
-    const [characterTraits, setCharacterTraits] = useState<string[]>([]);
+    const [characterTraits, setCharacterTraits] = useState<CharacterTrait[]>([]);
     const [loadingCharacterTraits, setLoadingCharacterTraits] = useState(false);
     const [errorCharacterTraits, setErrorCharacterTraits] = useState<string | null>(null);
     const [traitOptions, setTraitOptions] = useState<any[]>([]);
     const [loadingTraitOptions, setLoadingTraitOptions] = useState(false);
     const [errorTraitOptions, setErrorTraitOptions] = useState<string | null>(null);
     const searchRequestId = useRef(0);
+    const addTraitSelectionRequestId = useRef(0);
     const currentSearchQuery = useRef('');
     const [selectedAddTrait, setSelectedAddTrait] = useState<any[]>([]);
+    const [abilitySpeciality, setAbilitySpeciality] = useState('');
+    const [abilitySpecialityPlaceholder, setAbilitySpecialityPlaceholder] = useState('Speciality');
+    const [abilityExp, setAbilityExp] = useState('');
+    const [abilityScore, setAbilityScore] = useState('');
     const [addTraitDescription, setAddTraitDescription] = useState<string | null>(null);
     const [addTraitDetails, setAddTraitDetails] = useState<string | null>(null);
     const [loadingAddDescription, setLoadingAddDescription] = useState(false);
@@ -92,9 +131,11 @@ export default function CharacterTraitEditor({
     const [traitPointValues, setTraitPointValues] = useState<Record<string, number | null>>({});
     const [submittingTrait, setSubmittingTrait] = useState(false);
     const [deletingTrait, setDeletingTrait] = useState<string | null>(null);
-    const allTraitPointsLoaded = characterTraits.every(name => Object.prototype.hasOwnProperty.call(traitPointValues, name));
-    const traitPointsUnavailable = characterTraits.some(name => traitPointValues[name] === null);
-    const totalTraitPoints = characterTraits.reduce((total, name) => total + (traitPointValues[name] ?? 0), 0);
+    const allTraitPointsLoaded = characterTraits.every(trait => Object.prototype.hasOwnProperty.call(traitPointValues, trait.name));
+    const traitPointsUnavailable = characterTraits.some(trait => traitPointValues[trait.name] === null);
+    const totalTraitPoints = characterTraits.reduce((total, trait) => total + (traitPointValues[trait.name] ?? 0), 0);
+    const isOptionalInteger = (value: string) => value === '' || Number.isInteger(Number(value));
+    const validAbilityNumbers = isOptionalInteger(abilityExp) && isOptionalInteger(abilityScore);
 
     const fetchTraitDescription = useCallback(async (name: string) => {
         if (!name || traitDescriptions[name] !== undefined) return;
@@ -170,20 +211,21 @@ export default function CharacterTraitEditor({
             .then((response: any) => {
                 if (!isMounted) return;
                 const data = response?.data;
-                let names: string[] = [];
+                let traits: CharacterTrait[] = [];
                 if (Array.isArray(data)) {
-                    names = data.map(getTraitName);
+                    traits = data.map(getCharacterTrait);
                 } else if (typeof data === 'string') {
-                    names = [data];
+                    traits = [getCharacterTrait(data)];
                 } else if (data && typeof data === 'object') {
                     if (Array.isArray(data[plural])) {
-                        names = data[plural].map(getTraitName);
+                        traits = data[plural].map(getCharacterTrait);
                     } else if (data.name) {
-                        names = [data.name];
+                        traits = [getCharacterTrait(data)];
                     }
                 }
-                setCharacterTraits(sortTraitNames(names));
-                sortTraitNames(names).forEach(name => fetchTraitDescription(name));
+                const sortedTraits = sortCharacterTraits(traits);
+                setCharacterTraits(sortedTraits);
+                sortedTraits.forEach(({ name }) => fetchTraitDescription(name));
             })
             .catch((error: any) => {
                 if (isMounted) {
@@ -201,7 +243,9 @@ export default function CharacterTraitEditor({
     }, [characterId, fetchTraitDescription, getCharacterTraits, plural]);
 
     const handleAddSelectionChange = (selected: any[]) => {
+        const requestId = ++addTraitSelectionRequestId.current;
         setSelectedAddTrait(selected);
+        setAbilitySpecialityPlaceholder('Speciality');
         if (!selected.length) {
             setAddTraitDescription(null);
             setAddTraitDetails(null);
@@ -221,9 +265,13 @@ export default function CharacterTraitEditor({
         catalogService.get(name)
             .then((response: any) => {
                 const data = response?.data;
+                if (requestId !== addTraitSelectionRequestId.current) return;
                 const pointValue = showPoints ? getTraitPointValue(data?.level) : null;
                 if (showPoints && pointValue === null) {
                     console.warn(`Unexpected ${singular} level for "${name}":`, data?.level);
+                }
+                if (showAbilityFields && typeof data?.specialties === 'string') {
+                    setAbilitySpecialityPlaceholder(data.specialties);
                 }
                 if (showPoints) {
                     setTraitPointValues(previous => ({ ...previous, [name]: pointValue }));
@@ -243,6 +291,7 @@ export default function CharacterTraitEditor({
                 }));
             })
             .catch((error: any) => {
+                if (requestId !== addTraitSelectionRequestId.current) return;
                 console.error(`Failed to fetch description for ${singular} "${name}":`, error);
                 if (showPoints) {
                     setTraitPointValues(previous => ({ ...previous, [name]: null }));
@@ -260,18 +309,34 @@ export default function CharacterTraitEditor({
         const name = getTraitName(selectedAddTrait[0]);
         if (!name) return;
 
+        const details: AbilityDetails | undefined = showAbilityFields
+            ? {
+                speciality: abilitySpeciality || null,
+                exp: abilityExp === '' ? null : Number(abilityExp),
+                score: abilityScore === '' ? null : Number(abilityScore),
+            }
+            : undefined;
         setSubmittingTrait(true);
-        addCharacterTrait(characterId, name)
+        addCharacterTrait(characterId, name, details)
             .catch((error: any) => {
                 console.warn(`addCharacter${title} stub call failed or endpoint not ready:`, error);
             })
             .finally(() => {
-                setCharacterTraits(previous =>
-                    sortTraitNames(previous.includes(name) ? previous : [...previous, name]),
-                );
+                const addedTrait: CharacterTrait = {
+                    name,
+                    ...details,
+                };
+                setCharacterTraits(previous => sortCharacterTraits([
+                    ...previous.filter(trait => trait.name !== name),
+                    addedTrait,
+                ]));
                 fetchTraitDescription(name);
                 setSelectedAddTrait([]);
                 setAddTraitDescription(null);
+                setAbilitySpeciality('');
+                setAbilitySpecialityPlaceholder('Speciality');
+                setAbilityExp('');
+                setAbilityScore('');
                 if (onSave) onSave();
                 setSubmittingTrait(false);
             });
@@ -285,7 +350,7 @@ export default function CharacterTraitEditor({
                 console.warn(`deleteCharacter${title} stub call failed or endpoint not ready:`, error);
             })
             .finally(() => {
-                setCharacterTraits(previous => sortTraitNames(previous.filter(trait => trait !== name)));
+                setCharacterTraits(previous => previous.filter(trait => trait.name !== name));
                 if (onSave) onSave();
                 setDeletingTrait(null);
             });
@@ -323,30 +388,37 @@ export default function CharacterTraitEditor({
                             No {plural} assigned to this character.
                         </ListGroup.Item>
                     ) : (
-                        characterTraits.map((name, index) => (
+                        characterTraits.map((trait, index) => (
                             <ListGroup.Item
-                                key={`${name}-${index}`}
+                                key={`${trait.name}-${index}`}
                                 className="d-flex justify-content-between align-items-center"
                             >
-                                <OverlayTrigger
-                                    placement="top"
-                                    overlay={
-                                        <Tooltip id={`tooltip-${singular}-${index}`}>
-                                            {traitDescriptions[name] || 'Loading description...'}
-                                        </Tooltip>
-                                    }
-                                >
-                                    <span style={{ cursor: 'pointer' }} className="fw-medium">
-                                        {name}
-                                    </span>
-                                </OverlayTrigger>
+                                <div className="me-3">
+                                    <OverlayTrigger
+                                        placement="top"
+                                        overlay={
+                                            <Tooltip id={`tooltip-${singular}-${index}`}>
+                                                {traitDescriptions[trait.name] || 'Loading description...'}
+                                            </Tooltip>
+                                        }
+                                    >
+                                        <span style={{ cursor: 'pointer' }} className="fw-medium">
+                                            {trait.name}
+                                        </span>
+                                    </OverlayTrigger>
+                                    {showAbilityFields && (
+                                        <div className="small text-muted">
+                                            Speciality: {trait.speciality || '—'} · Exp: {trait.exp ?? '—'} · Score: {trait.score ?? '—'}
+                                        </div>
+                                    )}
+                                </div>
                                 <Button
                                     variant="outline-danger"
                                     size="sm"
-                                    disabled={deletingTrait === name}
-                                    onClick={() => handleDeleteTrait(name)}
+                                    disabled={deletingTrait === trait.name}
+                                    onClick={() => handleDeleteTrait(trait.name)}
                                 >
-                                    {deletingTrait === name ? (
+                                    {deletingTrait === trait.name ? (
                                         <Spinner animation="border" size="sm" />
                                     ) : (
                                         'Delete'
@@ -362,8 +434,8 @@ export default function CharacterTraitEditor({
 
             <h6 className="mb-2">Add {singular}...</h6>
             <Form.Group controlId={`add-${singular}-selection`} className="mb-3">
-                <div className="d-flex align-items-start gap-2">
-                    <div className="flex-grow-1">
+                <div className="row g-2 align-items-start">
+                    <div className={showAbilityFields ? 'col-12 col-md-5' : 'col'}>
                         <AsyncTypeahead
                             filterBy={() => true}
                             id={`add-${singular}-typeahead`}
@@ -380,22 +452,59 @@ export default function CharacterTraitEditor({
                             selected={selectedAddTrait}
                         />
                     </div>
-                    <Button
-                        variant="primary"
-                        onClick={handleAddTrait}
-                        disabled={!selectedAddTrait.length || submittingTrait || !characterId}
-                        style={{ whiteSpace: 'nowrap' }}
-                    >
-                        {submittingTrait ? (
-                            <>
-                                <Spinner animation="border" size="sm" className="me-2" />
-                                Adding...
-                            </>
-                        ) : (
-                            `Add ${title}`
-                        )}
-                    </Button>
+                    {showAbilityFields && (
+                        <>
+                            <div className="col-12 col-md-3">
+                                <Form.Control
+                                    aria-label="Ability speciality"
+                                    placeholder={abilitySpecialityPlaceholder}
+                                    value={abilitySpeciality}
+                                    onChange={event => setAbilitySpeciality(event.target.value)}
+                                />
+                            </div>
+                            <div className="col-6 col-md-1">
+                                <Form.Control
+                                    type="number"
+                                    step="1"
+                                    aria-label="Ability experience"
+                                    placeholder="Exp"
+                                    value={abilityExp}
+                                    onChange={event => setAbilityExp(event.target.value)}
+                                />
+                            </div>
+                            <div className="col-6 col-md-1">
+                                <Form.Control
+                                    type="number"
+                                    step="1"
+                                    aria-label="Ability score"
+                                    placeholder="Score"
+                                    value={abilityScore}
+                                    onChange={event => setAbilityScore(event.target.value)}
+                                />
+                            </div>
+                        </>
+                    )}
+                    <div className={showAbilityFields ? 'col-12 col-md-2' : 'col-auto'}>
+                        <Button
+                            variant="primary"
+                            onClick={handleAddTrait}
+                            disabled={!selectedAddTrait.length || submittingTrait || !characterId || !validAbilityNumbers}
+                            style={{ whiteSpace: 'nowrap' }}
+                        >
+                            {submittingTrait ? (
+                                <>
+                                    <Spinner animation="border" size="sm" className="me-2" />
+                                    Adding...
+                                </>
+                            ) : (
+                                `Add ${title}`
+                            )}
+                        </Button>
+                    </div>
                 </div>
+                {showAbilityFields && !validAbilityNumbers && (
+                    <Form.Text className="text-danger">Experience and score must be whole numbers.</Form.Text>
+                )}
                 {errorTraitOptions && (
                     <Alert variant="danger" className="mt-2">{errorTraitOptions}</Alert>
                 )}

@@ -45,6 +45,7 @@ export default function ArsMagicaEditor({ characterId, onSave }: ArsMagicaEditor
                     singular="ability"
                     plural="abilities"
                     showPoints={false}
+                    showAbilityFields
                     catalogService={AbilityService}
                     getCharacterTraits={CharacterService.getCharacterAbilities}
                     addCharacterTrait={CharacterService.addCharacterAbility}

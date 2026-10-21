@@ -61,8 +61,8 @@ const getCharacterAbilities = (id) => {
   return api.get(`characters/${id}/abilities`);
 };
 
-const addCharacterAbility = (id, abilityName) => {
-  return api.post(`characters/${id}/abilities/`, { name: abilityName });
+const addCharacterAbility = (id, abilityName, details = {}) => {
+  return api.post(`characters/${id}/abilities/`, { name: abilityName, ...details });
 };
 
 const deleteCharacterAbility = (id, abilityName) => {
