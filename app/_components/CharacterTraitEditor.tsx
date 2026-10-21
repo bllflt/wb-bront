@@ -109,7 +109,7 @@ export default function CharacterTraitEditor({
     addCharacterTrait,
     deleteCharacterTrait,
 }: CharacterTraitEditorProps) {
-    const title = `${singular[0].toUpperCase()}${singular.slice(1)}`;
+    const title = `${plural[0].toUpperCase()}${plural.slice(1)}`;
     const [characterTraits, setCharacterTraits] = useState<CharacterTrait[]>([]);
     const [loadingCharacterTraits, setLoadingCharacterTraits] = useState(false);
     const [errorCharacterTraits, setErrorCharacterTraits] = useState<string | null>(null);
@@ -358,7 +358,7 @@ export default function CharacterTraitEditor({
 
     return (
         <div className="h-100">
-            <h5 className="mb-3">{title}s</h5>
+            <h5 className="mb-3">{title}</h5>
             {showPoints && (
                 <div className="mb-3 text-muted" aria-live="polite">
                     points:{' '}
