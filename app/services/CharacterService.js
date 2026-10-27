@@ -33,6 +33,14 @@ const getCharacterConnections = (id, degree) => {
   return api.get(`characters/${id}/connections?degree=${degree}`);
 };
 
+const getCharacterCharacteristics = (id) => {
+  return api.get(`characters/${id}/characteristics`);
+};
+
+const updateCharacterCharacteristics = (id, characteristics) => {
+  return api.patch(`characters/${id}/characteristics`, characteristics);
+};
+
 const getCharacterVirtues = (id) => {
   return api.get(`characters/${id}/virtues`);
 };
@@ -78,6 +86,8 @@ const CharacterService = {
   remove,
   findByName,
   getCharacterConnections,
+  getCharacterCharacteristics,
+  updateCharacterCharacteristics,
   getCharacterVirtues,
   addCharacterVirtue,
   deleteCharacterVirtue,

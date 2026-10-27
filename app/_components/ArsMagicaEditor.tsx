@@ -1,6 +1,7 @@
 'use client';
 
 import CharacterTraitEditor from './CharacterTraitEditor';
+import CharacterCharacteristicsEditor from './CharacterCharacteristicsEditor';
 import CharacterService from '../services/CharacterService';
 import VirtueService from '../services/VirtueService';
 import FlawService from '../services/FlawService';
@@ -14,6 +15,7 @@ interface ArsMagicaEditorProps {
 export default function ArsMagicaEditor({ characterId, onSave }: ArsMagicaEditorProps) {
     return (
         <div className="row g-4 p-3">
+            <CharacterCharacteristicsEditor characterId={characterId} />
             <div className="col-md-6">
                 <CharacterTraitEditor
                     characterId={characterId}
