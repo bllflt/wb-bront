@@ -24,6 +24,7 @@ interface AbilityDetails {
 
 interface CharacterTrait {
     name: string;
+    displayValue?: string | null;
     speciality?: string | null;
     exp?: number | null;
     score?: number | null;
@@ -76,6 +77,7 @@ function getCharacterTrait(item: any): CharacterTrait {
     if (item && typeof item === 'object') {
         return {
             name: getTraitName(item),
+            displayValue: item.display_value ?? null,
             speciality: item.speciality ?? null,
             exp: item.exp ?? null,
             score: item.score ?? null,
@@ -403,7 +405,7 @@ export default function CharacterTraitEditor({
                                         }
                                     >
                                         <span style={{ cursor: 'pointer' }} className="fw-medium">
-                                            {trait.name}
+                                            {trait.displayValue ?? trait.name}
                                         </span>
                                     </OverlayTrigger>
                                     {showAbilityFields && (
