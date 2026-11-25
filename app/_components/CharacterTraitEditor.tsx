@@ -20,6 +20,7 @@ interface AbilityDetails {
     speciality: string | null;
     exp: number | null;
     score: number | null;
+    parameters: Record<string, string>;
 }
 
 interface CharacterTrait {
@@ -58,6 +59,20 @@ function getDescription(data: any): string {
         if (Object.keys(data).length > 0) return JSON.stringify(data, null, 2);
     }
     return '';
+}
+
+function getTemplateVariables(template: unknown): string[] {
+    if (typeof template !== 'string') return [];
+    const variables = Array.from(template.matchAll(/\{([^{}]+)\}/g), match => match[1].trim())
+        .filter(Boolean);
+    return [...new Set(variables)];
+}
+
+function getDisplayValue(template: string | null, parameters: Record<string, string>): string | null {
+    if (template === null) return null;
+    const variables = getTemplateVariables(template);
+    if (!variables.length || variables.some(parameter => !parameters[parameter]?.trim())) return null;
+    return template.replace(/\{([^{}]+)\}/g, (_, parameter: string) => parameters[parameter.trim()]);
 }
 
 function sortCharacterTraits(traits: CharacterTrait[]): CharacterTrait[] {
@@ -126,6 +141,9 @@ export default function CharacterTraitEditor({
     const [abilitySpecialityPlaceholder, setAbilitySpecialityPlaceholder] = useState('Speciality');
     const [abilityExp, setAbilityExp] = useState('');
     const [abilityScore, setAbilityScore] = useState('');
+    const [abilityParameterNames, setAbilityParameterNames] = useState<string[]>([]);
+    const [abilityParameterValues, setAbilityParameterValues] = useState<Record<string, string>>({});
+    const [abilityDisplayTemplate, setAbilityDisplayTemplate] = useState<string | null>(null);
     const [addTraitDescription, setAddTraitDescription] = useState<string | null>(null);
     const [addTraitDetails, setAddTraitDetails] = useState<string | null>(null);
     const [loadingAddDescription, setLoadingAddDescription] = useState(false);
@@ -248,6 +266,9 @@ export default function CharacterTraitEditor({
         const requestId = ++addTraitSelectionRequestId.current;
         setSelectedAddTrait(selected);
         setAbilitySpecialityPlaceholder('Speciality');
+        setAbilityParameterNames([]);
+        setAbilityParameterValues({});
+        setAbilityDisplayTemplate(null);
         if (!selected.length) {
             setAddTraitDescription(null);
             setAddTraitDetails(null);
@@ -274,6 +295,14 @@ export default function CharacterTraitEditor({
                 }
                 if (showAbilityFields && typeof data?.specialties === 'string') {
                     setAbilitySpecialityPlaceholder(data.specialties);
+                }
+                if (showAbilityFields) {
+                    setAbilityDisplayTemplate(
+                        typeof data?.display_template === 'string' ? data.display_template : null,
+                    );
+                    const parameterNames = getTemplateVariables(data?.display_template);
+                    setAbilityParameterNames(parameterNames);
+                    setAbilityParameterValues(Object.fromEntries(parameterNames.map(parameter => [parameter, ''])));
                 }
                 if (showPoints) {
                     setTraitPointValues(previous => ({ ...previous, [name]: pointValue }));
@@ -316,6 +345,9 @@ export default function CharacterTraitEditor({
                 speciality: abilitySpeciality || null,
                 exp: abilityExp === '' ? null : Number(abilityExp),
                 score: abilityScore === '' ? null : Number(abilityScore),
+                parameters: Object.fromEntries(
+                    abilityParameterNames.map(parameter => [parameter, abilityParameterValues[parameter] ?? '']),
+                ),
             }
             : undefined;
         setSubmittingTrait(true);
@@ -326,6 +358,7 @@ export default function CharacterTraitEditor({
             .finally(() => {
                 const addedTrait: CharacterTrait = {
                     name,
+                    displayValue: getDisplayValue(abilityDisplayTemplate, details?.parameters ?? {}),
                     ...details,
                 };
                 setCharacterTraits(previous => sortCharacterTraits([
@@ -339,6 +372,9 @@ export default function CharacterTraitEditor({
                 setAbilitySpecialityPlaceholder('Speciality');
                 setAbilityExp('');
                 setAbilityScore('');
+                setAbilityParameterNames([]);
+                setAbilityParameterValues({});
+                setAbilityDisplayTemplate(null);
                 if (onSave) onSave();
                 setSubmittingTrait(false);
             });
@@ -456,6 +492,19 @@ export default function CharacterTraitEditor({
                     </div>
                     {showAbilityFields && (
                         <>
+                            {abilityParameterNames.map(parameter => (
+                                <div className="col-12 col-md-3" key={parameter}>
+                                    <Form.Control
+                                        aria-label={`Ability parameter ${parameter}`}
+                                        placeholder={parameter}
+                                        value={abilityParameterValues[parameter] ?? ''}
+                                        onChange={event => setAbilityParameterValues(previous => ({
+                                            ...previous,
+                                            [parameter]: event.target.value,
+                                        }))}
+                                    />
+                                </div>
+                            ))}
                             <div className="col-12 col-md-3">
                                 <Form.Control
                                     aria-label="Ability speciality"
@@ -464,6 +513,7 @@ export default function CharacterTraitEditor({
                                     onChange={event => setAbilitySpeciality(event.target.value)}
                                 />
                             </div>
+
                             <div className="col-6 col-md-1">
                                 <Form.Control
                                     type="number"
@@ -490,7 +540,7 @@ export default function CharacterTraitEditor({
                         <Button
                             variant="primary"
                             onClick={handleAddTrait}
-                            disabled={!selectedAddTrait.length || submittingTrait || !characterId || !validAbilityNumbers}
+                            disabled={!selectedAddTrait.length || submittingTrait || loadingAddDescription || !characterId || !validAbilityNumbers}
                             style={{ whiteSpace: 'nowrap' }}
                         >
                             {submittingTrait ? (
